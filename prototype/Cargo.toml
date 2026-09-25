@@ -1,0 +1,7 @@
+[workspace]
+resolver = "3"
+members = ["graphcore", "proto-egui", "proto-iced"]
+
+[profile.release]
+debug = false
+opt-level = 3

@@ -1,0 +1,8 @@
+[package]
+name = "proto-iced"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+graphcore = { path = "../graphcore" }
+iced = { version = "0.14", features = ["canvas", "wgpu"] }
