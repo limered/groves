@@ -1,6 +1,6 @@
 ---
 id: 015
-title: "Spec: commit-graph viewer"
+title: "Spec: groves (commit-graph viewer)"
 labels: [ready-for-agent]
 source_map: 000
 status: open
@@ -12,11 +12,11 @@ I work across several git repositories at once. Each has multiple worktrees, hun
 
 ## Solution
 
-A fast, lightweight, **read-only** git graph viewer for Windows and Linux, written in Rust. One window holds nine **Workspaces**. Each workspace tiles **Panes** automatically in a Hyprland-like dwindle layout and is driven by the keyboard. A pane shows the graph of one repository, with the **Worktree HEAD marker** of every worktree of that repository on it. By default a pane draws only history reachable from the **Default ref set**, so stale remote branches and tags stay out of the way until asked for. The pane stays quiet: graph, **Pills**, HEAD markers and **Age lines**. **Commit info** appears on hover. Clicking commits **Pins** them, and a detail panel describes the whole **Pin set**. Repos fetch in the background every five minutes. The only network operation is `git fetch`, and nothing is ever written to a repository.
+**groves** is a fast, lightweight, **read-only** git graph viewer for Windows and Linux, written in Rust. One window holds nine **Groves**. Each grove tiles **Panes** automatically in a Hyprland-like dwindle layout and is driven by the keyboard. A pane shows the graph of one repository, with the **Worktree HEAD marker** of every worktree of that repository on it. By default a pane draws only history reachable from the **Default ref set**, so stale remote branches and tags stay out of the way until asked for. The pane stays quiet: graph, **Pills**, HEAD markers and **Age lines**. **Commit info** appears on hover. Clicking commits **Pins** them, and a detail panel describes the whole **Pin set**. Repos fetch in the background every five minutes. The only network operation is `git fetch`, and nothing is ever written to a repository.
 
 ## User Stories
 
-### Panes, workspaces, tiling
+### Panes, groves, tiling
 
 1. As a developer, I want to open a repository through the OS folder dialog (`Alt+Enter`), so that I can add a pane without configuring anything.
 2. As a developer, I want picking a worktree folder to open its repository, so that I never get two panes for the same repo.
@@ -27,12 +27,12 @@ A fast, lightweight, **read-only** git graph viewer for Windows and Linux, writt
 7. As a developer, I want to swap panes with `Alt+Shift+h/j/k/l`, so that I can rearrange the layout.
 8. As a developer, I want to close the focused pane with `Alt+q`, so that I can drop repos I no longer watch.
 9. As a developer, I want to toggle fullscreen for the focused pane with `Alt+f`, so that I can study one graph closely.
-10. As a developer, I want nine numbered workspaces switched with `Alt+1..9`, so that I can group repos by project.
-11. As a developer, I want to move the focused pane to another workspace with `Alt+Shift+1..9`, so that I can regroup.
-12. As a developer, I want a thin status bar that shows the current workspace, so that I know where I am.
+10. As a developer, I want nine numbered groves switched with `Alt+1..9`, so that I can group repos by project.
+11. As a developer, I want to move the focused pane to another grove with `Alt+Shift+1..9`, so that I can regroup.
+12. As a developer, I want a thin status bar that shows the current grove, so that I know where I am.
 13. As a developer, I want an `Alt+.` overlay that lists every key, so that I don't have to memorise the keymap.
-14. As a developer, I want an empty workspace to show a hint ("`Alt+Enter` open repo · `Alt+.` keys"), so that I know what to do.
-15. As a developer, I want workspaces, the pane tree, split ratios, the repo in each pane, window geometry and the last active workspace restored at startup, so that my setup survives restarts.
+14. As a developer, I want an empty grove to show a hint ("`Alt+Enter` open repo · `Alt+.` keys"), so that I know what to do.
+15. As a developer, I want groves, the pane tree, split ratios, the repo in each pane, window geometry and the last active grove restored at startup, so that my setup survives restarts.
 16. As a developer, I want a pane whose repository has disappeared to show a "missing, remove?" placeholder, so that one moved repo doesn't break startup.
 
 ### Graph and ref set
@@ -82,13 +82,13 @@ A fast, lightweight, **read-only** git graph viewer for Windows and Linux, writt
 
 ### Refresh and fetch
 
-50. As a developer, I want every open pane in every workspace fetched in the background every 5 minutes (first fetch about 10 s after the pane opens), so that remotes stay current.
+50. As a developer, I want every open pane in every grove fetched in the background every 5 minutes (first fetch about 10 s after the pane opens), so that remotes stay current.
 51. As a developer, I want at most 2 fetches at a time, round-robin, never two for the same repo, so that the machine and network stay calm.
 52. As a developer, I want `r` to fetch the focused pane and `Shift+R` all panes, jumping the queue and allowing credential prompts, so that I can refresh on demand.
 53. As a developer, I want background fetches to be silent (no prompts), so that nothing pops up unexpectedly.
 54. As a developer, I want a spinner on the pane header while fetching, a warning badge with the last error on hover, and "last fetched X ago", so that I know the pane's freshness without modals.
 55. As a developer, I want the interval to double after 3 consecutive failures (capped at 1 h) until a success or a manual `r`, so that broken remotes don't cause churn.
-56. As a developer, I want local ref changes (commits, checkouts in any worktree) detected within about 10 s for visible panes, and again on window focus or workspace switch, so that the graph follows my terminal work without a filesystem watcher.
+56. As a developer, I want local ref changes (commits, checkouts in any worktree) detected within about 10 s for visible panes, and again on window focus or grove switch, so that the graph follows my terminal work without a filesystem watcher.
 57. As a developer, I want the view to follow new tips when I'm scrolled to the top and otherwise stay anchored to the commit I'm looking at, so that refreshes don't yank me away.
 58. As a developer, I want the old graph drawn until the new one is ready, so that refreshes never flash or block.
 
@@ -101,9 +101,9 @@ A fast, lightweight, **read-only** git graph viewer for Windows and Linux, writt
 
 61. As a developer, I want a hand-edited `config.toml` with `fetch_interval_minutes`, `stale_after_days` and optional `git_path`, created once with commented defaults and never rewritten, so that my edits and comments survive.
 62. As a developer, I want a broken config to fall back to defaults with a warning naming the bad line, so that a typo never stops the app.
-63. As a developer, I want a corrupt or incompatible `state.json` backed up as `state.json.bak-<timestamp>` and the app to start with one empty workspace and a one-line notice, so that I never lose the file silently.
+63. As a developer, I want a corrupt or incompatible `state.json` backed up as `state.json.bak-<timestamp>` and the app to start with one empty grove and a one-line notice, so that I never lose the file silently.
 64. As a developer, I want state written atomically, debounced about 1 s after layout changes and once on exit, so that a crash never corrupts it.
-65. As a developer, I want data kept next to the exe in `commit-graph-data/` when writable, otherwise in OS config/state dirs, so that the app is portable.
+65. As a developer, I want data kept next to the exe in `groves-data/` when writable, otherwise in OS config/state dirs, so that the app is portable.
 
 ### Packaging and platform
 
@@ -133,7 +133,7 @@ A fast, lightweight, **read-only** git graph viewer for Windows and Linux, writt
 
 - **core**: the domain. DAG cache, ref-set computation, graph layout, age lines, pin set. It defines the `CommitSource` port and has no gix or UI dependencies. Its facade is `core::Pane`.
 - **repo**: the gix/git adapter that implements `CommitSource`. It also produces the ref snapshot and changed-path lists and runs fetch. Its facade is `repo::open(path)`.
-- **app**: egui, tiling, workspaces, input, persistence, scheduler. It wires everything together.
+- **app**: egui, tiling, groves, input, persistence, scheduler. It wires everything together.
 - **bench**: the performance harness. It drives `core` and `repo` through the same seams, using synthetic sources.
 
 ### Threading
@@ -159,7 +159,7 @@ A fast, lightweight, **read-only** git graph viewer for Windows and Linux, writt
 
 ### Refresh
 
-- Local change detection: every 10 s for visible panes, plus on window focus and when a workspace becomes visible. The check compares a cheap ref snapshot (mtimes of worktree HEAD files, `packed-refs`, `refs/`), and refs are read fully only when it changed.
+- Local change detection: every 10 s for visible panes, plus on window focus and when a grove becomes visible. The check compares a cheap ref snapshot (mtimes of worktree HEAD files, `packed-refs`, `refs/`), and refs are read fully only when it changed.
 - On a change (after a fetch or a local change): full reload of the DAG from gix, full relayout with the lane hints, then an atomic swap. The UI keeps drawing the old layout meanwhile.
 - After the swap: if scrolled to the top, follow the tips; otherwise keep the SHA anchor. Pins on unreachable commits are dropped; pins on pruned commits are kept and marked.
 
@@ -173,8 +173,8 @@ A fast, lightweight, **read-only** git graph viewer for Windows and Linux, writt
 ### Persistence
 
 - `config.toml` (hand-edited, global): `fetch_interval_minutes = 5`, `stale_after_days = 14`, optional `git_path`. Written once with comments, never rewritten. On a parse error: defaults plus a warning badge naming the line. Everything else is hard-coded (ref poll interval, age thresholds, keymap).
-- `state.json` (app-written, serde): `version`, workspaces, pane tree + split ratios, repo per pane, window position/size/maximized, last active workspace. Unknown keys are ignored. Written debounced about 1 s after changes and on exit, atomically (temp file + rename). Corrupt state: back it up with a timestamp and start empty.
-- Location: `<exe dir>/commit-graph-data/` if writable, else the `directories` OS dirs (`%APPDATA%\commit-graph\`; `$XDG_CONFIG_HOME/commit-graph/` for config and `$XDG_STATE_HOME/commit-graph/` for state).
+- `state.json` (app-written, serde): `version`, groves, pane tree + split ratios, repo per pane, window position/size/maximized, last active grove. Unknown keys are ignored. Written debounced about 1 s after changes and on exit, atomically (temp file + rename). Corrupt state: back it up with a timestamp and start empty.
+- Location: `<exe dir>/groves-data/` if writable, else the `directories` OS dirs (`%APPDATA%\groves\`; `$XDG_CONFIG_HOME/groves/` for config and `$XDG_STATE_HOME/groves/` for state).
 - SQLite was rejected (the state is under 10 KB, and a database would add a C dependency, migrations and lose the ability to fix the file by hand).
 
 ### Packaging
