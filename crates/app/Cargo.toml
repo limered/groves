@@ -1,0 +1,17 @@
+[package]
+name = "groves-app"
+version = "0.0.1"
+edition = "2024"
+
+[[bin]]
+name = "groves"
+path = "src/main.rs"
+
+[dependencies]
+groves-core = { path = "../core" }
+groves-repo = { path = "../repo" }
+eframe = { version = "0.36", default-features = false, features = ["glow", "wayland", "x11", "default_fonts"] }
+thiserror = { workspace = true }
+
+[dev-dependencies]
+groves-testkit = { path = "../testkit" }

@@ -1,0 +1,16 @@
+[package]
+name = "groves-repo"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+name = "groves_repo"
+path = "src/lib.rs"
+
+[dependencies]
+groves-core = { path = "../core" }
+gix = "0.87"
+thiserror = { workspace = true }
+
+[dev-dependencies]
+groves-testkit = { path = "../testkit" }

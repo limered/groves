@@ -1,0 +1,11 @@
+[package]
+name = "groves-testkit"
+version = "0.0.1"
+edition = "2024"
+
+[lib]
+name = "groves_testkit"
+path = "src/lib.rs"
+
+[dependencies]
+groves-core = { path = "../core" }
