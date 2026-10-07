@@ -23,3 +23,5 @@ Decide packaging for Windows + Linux: single static-ish binary vs. installer/MSI
 - **Updates**: none; replace the file by hand. The only network operation stays `fetch`.
 - **Windows extras**: embedded icon and version resource, per-monitor DPI awareness. No code signing, no Start-menu shortcut.
 - **Release source**: the owner builds releases locally with one documented script (`cargo build --release` + zigbuild). GitHub Actions possibly later (tracked with CI under Not yet specified).
+
+**Update 2026-10-07**: releases are now built and published by GitHub Actions (`.github/workflows/cd.yml`) when a `v*` tag is pushed; the tag must match `groves-app`'s crate version. Supersedes local-only release builds. Artifacts: `groves-<tag>-x86_64-windows.zip`, `groves-<tag>-x86_64-linux-gnu.tar.gz`.

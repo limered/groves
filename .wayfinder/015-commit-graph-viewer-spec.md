@@ -182,7 +182,7 @@ I work across several git repositories at once. Each has multiple worktrees, hun
 - One portable binary per OS: a zip on Windows, a tarball on Linux. Linux is built with `cargo zigbuild` against glibc 2.31 (musl was rejected because GL/Wayland are loaded at runtime), with winit's Wayland and X11 both enabled.
 - Windows: embedded icon and version resource, per-monitor DPI awareness. No code signing, no shortcut, no updater.
 - If GL 3.3 / GLES 3.0 is missing: an error dialog naming the version found.
-- Releases are built locally by the owner with one documented script.
+- Releases are built and published by GitHub Actions (`.github/workflows/cd.yml`) when a `v*` tag is pushed; previously a local owner-only script.
 
 ### Budgets (target 200k commits / 50k refs)
 

@@ -1,0 +1,143 @@
+# CD: build the portable binaries and publish them to GitHub Releases.
+#
+# Triggered by pushing a version tag (`v*`), or manually (workflow_dispatch).
+# On a tag push, both platform builds run tests first, then the artifacts are
+# attached to a GitHub Release named after the tag. On a manual run the
+# artifacts are only attached to the workflow run (no release).
+#
+# Packaging follows decision 014 (.wayfinder/014-packaging-grilling.md):
+# one portable binary per OS - a zip holding the exe on Windows, a tarball
+# holding the binary on Linux. The Linux build targets glibc 2.31 via
+# cargo zigbuild and carries Wayland and X11 both, so one binary serves
+# Nobara, Omarchy and any other desktop distro with glibc >= 2.31.
+
+name: CD
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+env:
+  # Pinned zig: known-good with cargo-zigbuild for glibc targets.
+  ZIG_VERSION: "0.13.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: cd-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  windows:
+    name: Windows x86_64 (portable zip)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches crate version
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        run: |
+          $tag = "${{ github.ref_name }}" -replace '^v', ''
+          $crate = (Select-String -Path crates/app/Cargo.toml -Pattern '^version = "(.*)"' |
+            Select-Object -First 1).Matches[0].Groups[1].Value
+          if ($tag -ne $crate) {
+            Write-Output "::error::Tag v$tag does not match groves-app version $crate"
+            exit 1
+          }
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Build (release)
+        run: cargo build --release --locked -p groves-app
+
+      - name: Package
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path dist | Out-Null
+          Compress-Archive -Path target/release/groves.exe `
+            -DestinationPath "dist/groves-${{ github.ref_name }}-x86_64-windows.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: groves-${{ github.ref_name }}-x86_64-windows
+          path: dist/*
+
+  linux:
+    name: Linux x86_64 (portable tarball, glibc 2.31)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check tag matches crate version
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME#v}"
+          crate="$(sed -n 's/^version = "\(.*\)"$/\1/p' crates/app/Cargo.toml | head -n1)"
+          if [ "$tag" != "$crate" ]; then
+            echo "::error::Tag v$tag does not match groves-app version $crate"
+            exit 1
+          fi
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Install cargo-zigbuild
+        uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-zigbuild
+
+      # Inline zig install instead of a third-party action: cargo-zigbuild
+      # only invokes `zig cc` as a linker, so nothing else is needed.
+      - name: Install zig
+        run: |
+          set -euo pipefail
+          curl -fsSL -o zig.tar.xz \
+            "https://ziglang.org/download/${ZIG_VERSION}/zig-linux-x86_64-${ZIG_VERSION}.tar.xz"
+          tar -xJf zig.tar.xz
+          echo "$PWD/zig-linux-x86_64-${ZIG_VERSION}" >> "$GITHUB_PATH"
+
+      - uses: Swatinem/rust-cache@v2
+
+      - name: Test
+        run: cargo test --workspace --locked
+
+      - name: Build (release, glibc 2.31)
+        run: cargo zigbuild --release --locked -p groves-app --target x86_64-unknown-linux-gnu.2.31
+
+      - name: Package
+        run: |
+          mkdir -p dist
+          tar -czf "dist/groves-${GITHUB_REF_NAME}-x86_64-linux-gnu.tar.gz" \
+            -C target/x86_64-unknown-linux-gnu/release groves
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: groves-${{ github.ref_name }}-x86_64-linux-gnu
+          path: dist/*
+
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, linux]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+          path: dist
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true

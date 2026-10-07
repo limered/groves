@@ -2,5 +2,9 @@
 resolver = "3"
 members = ["crates/core", "crates/repo", "crates/app", "crates/testkit"]
 
+[profile.release]
+# Portable artifacts: strip the symbol table for a smaller download.
+strip = true
+
 [workspace.dependencies]
 thiserror = "2"
