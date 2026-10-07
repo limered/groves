@@ -6,12 +6,13 @@ pub struct Commit {
     pub title: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Row {
     pub short: String,
     pub title: String,
 }
 
+#[derive(Debug)]
 pub struct Pane {
     rows: Vec<Row>,
 }

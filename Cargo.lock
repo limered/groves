@@ -2075,6 +2075,7 @@ name = "groves-app"
 version = "0.0.1"
 dependencies = [
  "eframe",
+ "egui",
  "groves-core",
  "groves-repo",
  "groves-testkit",

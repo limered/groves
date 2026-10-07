@@ -12,6 +12,7 @@ groves-core = { path = "../core" }
 groves-repo = { path = "../repo" }
 eframe = { version = "0.36", default-features = false, features = ["glow", "wayland", "x11", "default_fonts"] }
 thiserror = { workspace = true }
+egui = "0.36.2"
 
 [dev-dependencies]
 groves-testkit = { path = "../testkit" }
