@@ -52,8 +52,11 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
                 .to_owned();
 
             Ok(Commit {
+                parents: info.parent_ids.iter().map(|id| id.to_string()).collect(),
+                time: info.commit_time(),
                 id: info.id.to_string(),
                 title,
+                refs: Vec::new(),
             })
         })
         .collect::<Result<_, _>>()?;

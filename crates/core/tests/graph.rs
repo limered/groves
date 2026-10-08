@@ -37,7 +37,7 @@
 //! which row, which lane each row's node sits in, how wide the graph column
 //! is — never internal DAG storage.
 
-use groves_core::{LANE_WIDTH_PX, ROW_HEIGHT_PX, Pane};
+use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_testkit::SyntheticSource;
 use std::collections::HashMap;
 
@@ -101,7 +101,11 @@ fn branch_and_merge_reuses_the_freed_lane() {
     let pane = Pane::load(&SyntheticSource::branch_and_merge());
     let lanes = lanes_by_id(&pane);
 
-    assert_eq!(pane.lane_count(), 2, "one side branch needs two lanes, not more");
+    assert_eq!(
+        pane.lane_count(),
+        2,
+        "one side branch needs two lanes, not more"
+    );
     // The merge tip and the whole main first-parent chain share lane 0 …
     assert_eq!(lanes["m3"], 0);
     assert_eq!(lanes["m1"], 0);
@@ -118,7 +122,10 @@ fn head_first_parent_chain_owns_lane_zero() {
     let lanes = lanes_by_id(&pane);
 
     assert_eq!(lanes["m2"], 0, "HEAD tip sits in lane 0");
-    assert_eq!(lanes["m1"], 0, "HEAD's first-parent chain never leaves lane 0");
+    assert_eq!(
+        lanes["m1"], 0,
+        "HEAD's first-parent chain never leaves lane 0"
+    );
     assert_eq!(lanes["m0"], 0);
     assert_eq!(lanes["s1"], 1, "the newer side tip does not steal lane 0");
 }

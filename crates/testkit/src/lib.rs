@@ -16,7 +16,8 @@ pub struct SyntheticSource {
 
 /// One commit of a synthetic graph: ids are free-form strings in tests
 /// (readable like `"m2"`), parents name other commits' ids.
-pub struct GraphCommit {    pub id: String,
+pub struct GraphCommit {
+    pub id: String,
     pub parents: Vec<String>,
     pub title: String,
     pub time: i64,
@@ -105,7 +106,13 @@ impl SyntheticSource {
     /// never needs more than two lanes.
     pub fn branch_and_merge() -> Self {
         Self::for_graph(vec![
-            Self::g("m3", &["m1", "s1"], "Merge side branch", 400, &["HEAD", "main"]),
+            Self::g(
+                "m3",
+                &["m1", "s1"],
+                "Merge side branch",
+                400,
+                &["HEAD", "main"],
+            ),
             Self::g("s1", &["m0"], "Side work", 300, &[]),
             Self::g("m1", &["m0"], "Main work", 200, &[]),
             Self::g("m0", &[], "Root", 100, &[]),
@@ -130,7 +137,13 @@ impl SyntheticSource {
     pub fn shuffled_branch_and_merge() -> Self {
         Self::for_graph(vec![
             Self::g("m0", &[], "Root", 100, &[]),
-            Self::g("m3", &["m1", "s1"], "Merge side branch", 400, &["HEAD", "main"]),
+            Self::g(
+                "m3",
+                &["m1", "s1"],
+                "Merge side branch",
+                400,
+                &["HEAD", "main"],
+            ),
             Self::g("m1", &["m0"], "Main work", 200, &[]),
             Self::g("s1", &["m0"], "Side work", 300, &[]),
         ])
@@ -208,14 +221,7 @@ pub fn init_branch_fixture_repo() -> PathBuf {
     git(&dir, &["commit", "-q", "-m", "Main work"]);
     git(
         &dir,
-        &[
-            "merge",
-            "-q",
-            "--no-ff",
-            "-m",
-            "Merge side branch",
-            "side",
-        ],
+        &["merge", "-q", "--no-ff", "-m", "Merge side branch", "side"],
     );
     dir
 }
