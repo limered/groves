@@ -51,14 +51,15 @@ Nothing needs to be installed. Unpack the archive and start the binary with the 
 
 ### Publishing a release
 
-1. Bump `version` in `crates/app/Cargo.toml` (and the other crates for consistency), run `cargo build` to update `Cargo.lock`, then commit. CI builds with `--locked`.
-2. Tag and push. The tag must match the app version exactly, or the workflow fails:
+Development happens on `dev`, and a merge into `main` is a release. Run the `release` skill in OpenCode (optionally with a version, e.g. `release 1.0.0`). By default it bumps the minor version, e.g. `0.1.0 → 0.2.0`. The skill:
 
-   ```sh
-   git tag vX.Y.Z
-   git push origin vX.Y.Z
-   ```
+1. checks that the working tree is clean and that tests and clippy pass on `dev`
+2. merges `dev` into `main`
+3. bumps the version in all crates and refreshes `Cargo.lock`
+4. writes a new `CHANGELOG.md` section from the tickets closed since the last release
+5. asks once, then tags `vX.Y.Z` and pushes `main` and the tag
+6. fast-forwards `dev` to `main`
 
-3. The CD workflow (`.github/workflows/cd.yml`) runs the tests on Windows and Linux, builds both portable archives and publishes them as a GitHub Release with generated notes.
+The tag starts the CD workflow (`.github/workflows/cd.yml`). It tests on Windows and Linux, builds both portable archives and publishes a GitHub Release whose text is the version's `CHANGELOG.md` section.
 
 To test packaging without publishing a release, start the workflow manually (`workflow_dispatch`). The archives are then attached only to the workflow run.

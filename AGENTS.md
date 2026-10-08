@@ -23,6 +23,9 @@ groves: a read-only commit-graph viewer in Rust (egui/eframe 0.36, gix). Learnin
 - The testkit fixtures shell out to `git` (`git fast-import`), so `git` must be on PATH.
 - The UI has no automated tests. Tickets list UI behaviour under `## Manual checks`.
 
-## Release
+## Branches & release
+- Work happens on `dev`. A merge of `dev` into `main` **is** a release. Never commit feature work directly to `main`.
+- Release only through the `release` skill (`.opencode/skills/release/SKILL.md`). It merges dev into main, bumps the version in all four crates (in sync), writes the `CHANGELOG.md` section from the tickets closed since the last tag, then tags and pushes, and fast-forwards dev.
+- The CD release text is the `## [X.Y.Z]` section of `CHANGELOG.md`, so keep that heading format exact.
 - `.github/workflows/cd.yml` runs on `v*` tags. The tag must equal the `version` in `crates/app/Cargo.toml`, or the job fails. CI uses `--locked`, so commit `Cargo.lock`.
 - The Linux build uses `cargo zigbuild` targeting glibc 2.31. Windows produces a zip containing `groves.exe`.
