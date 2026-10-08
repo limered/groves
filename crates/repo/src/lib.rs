@@ -1,6 +1,7 @@
+use gix;
 // Emil owns this file — ticket 01 will add `open(path)` plus the `CommitSource` impl here.
 use groves_core::{Commit, CommitSource};
-use std::path::Path;
+use std::{path::Path};
 use thiserror::Error;
 
 pub struct Repo {
@@ -15,19 +16,20 @@ impl CommitSource for Repo {
 #[derive(Error, Debug)]
 pub enum RepoError {
     #[error("can't open repo: {0}")]
-    NotARepository(#[source] Box<gix::open::Error>),
-    #[error("repository has no head")]
-    NoHead(#[from] gix::reference::head_commit::Error),
-    #[error("head has no commits")]
-    NoCommits(#[from] gix::revision::walk::Error),
-    #[error("error retrieving commit info")]
-    NoCommitInfo(#[from] gix::revision::walk::iter::Error),
-    #[error("commit could not be found")]
-    CantFindCommit(#[from] gix::object::find::existing::with_conversion::Error),
+    NotARepository(#[source] Box<gix::Error>),
+    // #[error("repository has no head")]
+    // NoHead(#[from] gix::reference::head_commit::Error),
+    // #[error("head has no commits")]
+    // NoCommits(#[from] gix::revision::walk::Error),
+    // #[error("error retrieving commit info")]
+    // NoCommitInfo(#[from] gix::revision::walk::iter::Error),
+    // #[error("commit could not be found")]
+    // CantFindCommit(#[from] gix::object::find::existing::with_conversion::Error),
 }
 
-impl From<gix::open::Error> for RepoError {
-    fn from(error: gix::open::Error) -> Self {
+impl From<gix::Error> for RepoError {
+    fn from(error: gix::Error) -> Self {
+        
         Self::NotARepository(Box::new(error))
     }
 }
@@ -35,6 +37,8 @@ impl From<gix::open::Error> for RepoError {
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
     let repo = gix::open(path)?;
     let head = repo.head_commit()?;
+
+    let walk_platform = repo.rev_walk([head.id]);
 
     let head_commits = head.ancestors().all()?;
 

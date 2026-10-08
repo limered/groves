@@ -8,6 +8,9 @@
 
 **Status:** in-progress
 
+**Decisions:**
+- gix 0.87 → 0.89 (spec says "0.87 line"; 0.89 unifies fallible APIs on one boxed `gix::Error`, so `RepoError` wraps sites, not types — accepted, spec line now reads "0.8x line").
+
 ## Manual checks (UI behaviour, checked by hand — no automated UI tests per spec)
 
 - [ ] `cargo run -p groves-app -- /home/limered/code/groves` draws nodes + edges with the painter (22 px rows, 14 px lanes), commit text starts right of the graph column and is never drawn over
