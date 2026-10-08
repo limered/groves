@@ -4,7 +4,7 @@
 
 **What to build:** The pane shows no commit text by default. Hovering a node fades in its **Commit info** inline (`a1b2c3d  Emil  Fix lane reuse  · 3h ago`). Clicking a node toggles a **Pin** whose info stays visible, and a pane can hold any number of pins. `m` peeks at the info on all rows, and `Esc` clears all pins. Commit info is loaded eagerly for the current ref set.
 
-**Blocked by:** 02
+**Blocked by:** 02, 05b
 
 **Status:** ready-for-agent
 
