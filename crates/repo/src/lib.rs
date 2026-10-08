@@ -1,7 +1,7 @@
 use gix;
 // Emil owns this file — ticket 01 will add `open(path)` plus the `CommitSource` impl here.
 use groves_core::{Commit, CommitSource};
-use std::{path::Path};
+use std::path::Path;
 use thiserror::Error;
 
 pub struct Repo {
@@ -16,36 +16,31 @@ impl CommitSource for Repo {
 #[derive(Error, Debug)]
 pub enum RepoError {
     #[error("can't open repo: {0}")]
-    NotARepository(#[source] Box<gix::Error>),
-    // #[error("repository has no head")]
-    // NoHead(#[from] gix::reference::head_commit::Error),
-    // #[error("head has no commits")]
-    // NoCommits(#[from] gix::revision::walk::Error),
-    // #[error("error retrieving commit info")]
-    // NoCommitInfo(#[from] gix::revision::walk::iter::Error),
-    // #[error("commit could not be found")]
-    // CantFindCommit(#[from] gix::object::find::existing::with_conversion::Error),
-}
-
-impl From<gix::Error> for RepoError {
-    fn from(error: gix::Error) -> Self {
-        
-        Self::NotARepository(Box::new(error))
-    }
+    NotARepository(gix::Error),
+    #[error("repository has no head")]
+    NoHead(gix::Error),
+    #[error("head has no commits")]
+    NoCommits(gix::Error),
+    #[error("error retrieving commit info")]
+    NoCommitInfo(gix::Error),
+    #[error("commit could not be found")]
+    CantFindCommit(gix::Error),
 }
 
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
-    let repo = gix::open(path)?;
-    let head = repo.head_commit()?;
+    let repo = gix::open(path).map_err(RepoError::NotARepository)?;
+    let head = repo.head_commit().map_err(RepoError::NoHead)?;
 
     let walk_platform = repo.rev_walk([head.id]);
 
-    let head_commits = head.ancestors().all()?;
+    let head_commits = head.ancestors().all().map_err(RepoError::NoCommits)?;
 
     let commits = head_commits
         .map(|item| -> Result<Commit, RepoError> {
-            let info = item?;
-            let commit = repo.find_commit(info.id)?;
+            let info = item.map_err(RepoError::NoCommitInfo)?;
+            let commit = repo
+                .find_commit(info.id)
+                .map_err(RepoError::CantFindCommit)?;
             let title = commit
                 .message_raw()
                 .unwrap_or_default()
