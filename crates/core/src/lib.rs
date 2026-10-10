@@ -3,7 +3,7 @@
 pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
 
-#[derive(Clone)]
+#[derive(Clone, Eq, Ord, PartialEq, PartialOrd)]
 pub struct Commit {
     pub id: String,
     pub parents: Vec<String>,
@@ -35,8 +35,10 @@ pub struct Pane {
 
 impl Pane {
     pub fn load(source: &impl CommitSource) -> Self {
-        let rows = source
-            .commits()
+        let mut sorted_rows = source.commits();
+        sorted_rows.sort_by(|a, b| a.time.cmp(&b.time));
+
+        let rows = sorted_rows
             .into_iter()
             .map(|c| Row {
                 id: c.id.clone(),
@@ -45,6 +47,8 @@ impl Pane {
                 lane: 0,
             })
             .collect();
+
+        
         let edges = Vec::new();
         Pane { rows, edges }
     }
