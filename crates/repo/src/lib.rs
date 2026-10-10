@@ -19,8 +19,6 @@ pub enum RepoError {
     NotARepository(#[source] gix::Error),
     #[error("repository has no head")]
     NoHead(#[source] gix::Error),
-    #[error("head has no commits")]
-    NoCommits(#[source] gix::Error),
     #[error("error retrieving commit info")]
     NoCommitInfo(#[source] gix::Error),
     #[error("commit could not be found")]
@@ -29,8 +27,6 @@ pub enum RepoError {
     Walk(#[source] gix::Error),
     #[error("commit has no message {0}")]
     NoCommitMessage(#[source] gix::Error),
-    #[error("commit has no auhor {0}")]
-    MissingAuthor(#[source] gix::Error),
 }
 
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
@@ -54,7 +50,6 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
 
         let message = commit.message().map_err(RepoError::NoCommitMessage)?;
         let summary = message.summary();
-        let _author = commit.author().map_err(RepoError::MissingAuthor)?;
 
         commits.push(Commit {
             parents: info.parent_ids.iter().map(|id| id.to_string()).collect(),
