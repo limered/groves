@@ -39,7 +39,7 @@ impl Pane {
         let mut rows: Vec<Row> = Vec::new();
         let mut placed: Vec<bool> = Vec::new();
         let mut lanes: Vec<usize> = Vec::new();
-        let mut row_ids:Vec<usize> = Vec::new();
+        let mut row_ids: Vec<usize> = Vec::new();
         let mut occupancy: Vec<bool> = Vec::new();
         let edges = Vec::new();
 
@@ -64,7 +64,12 @@ impl Pane {
             let parent = commits[head_id].parents.first();
             match parent {
                 None => break,
-                Some(p) => head_id = commit_index[p],
+                Some(p) => match commit_index.get(p) {
+                    None => break,
+                    Some(parent) => {
+                        head_id = *parent;
+                    }
+                },
             }
         }
         occupancy.push(true);
