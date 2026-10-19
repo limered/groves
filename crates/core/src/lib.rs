@@ -48,8 +48,7 @@ impl Pane {
         // index commit-id to index
         let mut commit_index: HashMap<String, usize> = HashMap::new();
         let mut head_index: usize = 0; // fallback if head can't be found
-        for i in 0..commits.len() {
-            let c = &commits[i];
+        for (i, c) in commits.iter().enumerate() {
             commit_index.insert(c.id.clone(), i);
             if c.refs.contains(&"HEAD".to_string()) {
                 head_index = i;
@@ -74,7 +73,7 @@ impl Pane {
             .filter(|i| child_count[*i] == 0)
             .collect();
 
-        while queue.len() > 0 {
+        while !queue.is_empty() {
             queue.sort_by(|a, b| commits[*a].time.cmp(&commits[*b].time));
             let Some(c) = queue.pop() else {
                 break;
@@ -150,14 +149,14 @@ impl Pane {
         }
 
         // instatces
-        for i in 0..row_ids.len() {
-            if placed[row_ids[i]] {
-                let c = &commits[row_ids[i]];
+        for index in row_ids {
+            if placed[index] {
+                let c = &commits[index];
                 rows.push(Row {
                     id: c.id.clone(),
                     short: c.id.get(..7).unwrap_or(&c.id).to_string(),
                     title: c.title.clone(),
-                    lane: lanes[row_ids[i]],
+                    lane: lanes[index],
                 });
             }
         }

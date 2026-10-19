@@ -1,5 +1,4 @@
 // Emil owns this file — ticket 01 will add `open(path)` plus the `CommitSource` impl here.
-use gix;
 use groves_core::{Commit, CommitSource};
 use std::path::Path;
 use thiserror::Error;
