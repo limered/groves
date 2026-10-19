@@ -91,17 +91,65 @@ impl Pane {
             }
         }
 
-                    else {
-                        break;
+        // lanes
+        let mut reserved_lanes: Vec<i32> = Vec::new();
+        reserved_lanes.push(head_index as i32);
+        for id in &row_ids {
+            match reserved_lanes.iter().position(|i| i.eq(&((*id) as i32))) {
+                None => {
+                    lanes[*id] = match reserved_lanes.iter().position(|i| *i == -1) {
+                        None => reserved_lanes.len(),
+                        Some(i) => i,
                     };
-                    row_ids.insert(row_index, c);
-                } else {
-                    row_ids.push(c);
+                    placed[*id] = true;
+                    for p in &commits[*id].parents {
+                        let Some(p_id) = commit_index.get(p) else {
+                            continue;
+                        };
+                        match reserved_lanes.iter().position(|i| *i == -1) {
+                            None => reserved_lanes.push(*p_id as i32),
+                            Some(i) => {
+                                reserved_lanes[i] = *p_id as i32;
+                            }
+                        }
+                    }
+                }
+                Some(i) => {
+                    lanes[*id] = i;
+                    placed[*id] = true;
+                    let parents = &commits[*id].parents;
+                    if parents.is_empty() {
+                        continue;
+                    }
+                    let Some(p_id) = commit_index.get(&parents[0]) else {
+                        continue;
+                    };
+                    reserved_lanes[i] = *p_id as i32;
+
+                    // merge
+                    if parents.len() == 2 {
+                        let Some(p_id) = commit_index.get(&parents[1]) else {
+                            continue;
+                        };
+                        match reserved_lanes.iter().position(|i| *i == -1) {
+                            None => reserved_lanes.push(*p_id as i32),
+                            Some(i) => {
+                                reserved_lanes[i] = *p_id as i32;
+                            }
+                        }
+                    }
+
+                    // split
+                    let Some(second_i) = reserved_lanes.iter().position(|i| i.eq(&((*id) as i32)))
+                    else {
+                        continue;
+                    };
+                    reserved_lanes[second_i] = -1;
                 }
             }
-            queue.append(&mut parent_ids);
         }
 
+        // instatces
         for i in 0..row_ids.len() {
             if placed[row_ids[i]] {
                 let c = &commits[row_ids[i]];

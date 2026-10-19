@@ -15,6 +15,7 @@
 
 - [ ] `cargo run -p groves-app -- /home/limered/code/groves` draws nodes + edges with the painter (22 px rows, 14 px lanes), commit text starts right of the graph column and is never drawn over
 - [ ] HEAD's first-parent chain runs straight down lane 0 (leftmost)
+- [ ] On `/home/limered/Projects/LD41`, commits reachable from HEAD appear in the same parent-before-child direction/order as `git log HEAD --graph --oneline --date-order`; refs outside HEAD's history are intentionally not included yet (ticket 03)
 - [ ] Longer repo for the scroll-feel check: Factory repo or `/home/limered/Projects/autodev` — scrolling a thousand-plus commits shows no visible stutter (only visible rows are painted)
 
 **Rust focus:** the DAG as a struct of arrays: `u32` row indices into parallel `Vec`s (rapier handles, again), CSR parent lists, borrowing inside loops, `HashMap`, the egui `Painter`, and drawing only the visible rows.
