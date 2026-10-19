@@ -38,7 +38,7 @@
 //! is — never internal DAG storage.
 
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
-use groves_testkit::SyntheticSource;
+use groves_testkit::{GraphCommit, SyntheticSource};
 use std::collections::HashMap;
 
 fn lanes_by_id(pane: &Pane) -> HashMap<String, usize> {
@@ -84,6 +84,49 @@ fn shuffled_input_still_draws_children_above_parents() {
         order, shuffled_order,
         "row order follows the graph, not the source listing order"
     );
+}
+
+#[test]
+fn second_parent_branch_does_not_jump_above_head() {
+    // A side commit is merged into HEAD, and its parent is also HEAD's
+    // first parent: h -> (m1, s1), s1 -> m1 -> m0. This is the shape in
+    // which inserting the whole first-parent chain before the side branch
+    // can accidentally put s1 above h.
+    let source = SyntheticSource::for_graph(vec![
+        GraphCommit {
+            id: "h".to_string(),
+            parents: vec!["m1".to_string(), "s1".to_string()],
+            title: "Merge side work".to_string(),
+            time: 400,
+            refs: vec!["HEAD".to_string()],
+        },
+        GraphCommit {
+            id: "s1".to_string(),
+            parents: vec!["m1".to_string()],
+            title: "Side work".to_string(),
+            time: 300,
+            refs: vec![],
+        },
+        GraphCommit {
+            id: "m1".to_string(),
+            parents: vec!["m0".to_string()],
+            title: "Main work".to_string(),
+            time: 200,
+            refs: vec![],
+        },
+        GraphCommit {
+            id: "m0".to_string(),
+            parents: vec![],
+            title: "Root".to_string(),
+            time: 100,
+            refs: vec![],
+        },
+    ]);
+
+    let pane = Pane::load(&source);
+    let order: Vec<&str> = pane.rows().iter().map(|row| row.id.as_str()).collect();
+
+    assert_eq!(order, vec!["h", "s1", "m1", "m0"]);
 }
 
 #[test]
