@@ -196,7 +196,7 @@ fn lanes_never_shift_sideways_along_a_branch() {
     targets.sort();
     assert_eq!(
         targets,
-        vec![(row_of(&pane, "m1"), 0), (row_of(&pane, "s1"), 1)],
+        vec![(row_of(&pane, "s1"), 1), (row_of(&pane, "m1"), 0)],
         "the merge tip visibly connects to both parents' lanes"
     );
 }

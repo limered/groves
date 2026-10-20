@@ -17,17 +17,13 @@ impl eframe::App for GrovesApp {
             match &self.content {
                 Ok(pane) => {
                     let row_height = ui.text_style_height(&egui::TextStyle::Monospace);
-                    egui::ScrollArea::vertical().show_rows(
-                        ui,
-                        row_height,
-                        pane.rows().len(),
-                        |ui, row_range| {
-                            for row_id in row_range {
-                                let row = &pane.rows()[row_id];
-                                ui.monospace(format!("{} {}", row.short, row.title));
-                            }
-                        },
-                    );
+                    let sa = egui::ScrollArea::vertical().auto_shrink(false);
+                    sa.show_rows(ui, row_height, pane.rows().len(), |ui, row_range| {
+                        for row_id in row_range {
+                            let row = &pane.rows()[row_id];
+                            ui.monospace(format!("{} {}", row.short, row.title));
+                        }
+                    });
                 }
                 Err(err) => {
                     ui.label(err);

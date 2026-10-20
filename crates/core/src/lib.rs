@@ -38,12 +38,13 @@ impl Pane {
     pub fn load(source: &impl CommitSource) -> Self {
         let commits = source.commits();
 
-        let mut rows: Vec<Row> = Vec::new();
         let mut placed: Vec<bool> = Vec::new();
         let mut lanes: Vec<usize> = Vec::new();
         let mut row_ids: Vec<usize> = Vec::new();
         let mut child_count: Vec<usize> = Vec::new();
-        let edges = Vec::new();
+
+        let mut rows: Vec<Row> = Vec::new();
+        let mut edges = Vec::new();
 
         // index commit-id to index
         let mut commit_index: HashMap<String, usize> = HashMap::new();
@@ -160,15 +161,31 @@ impl Pane {
         }
 
         // instatces
-        for index in row_ids {
-            if placed[index] {
-                let c = &commits[index];
+        for (i, index) in row_ids.iter().enumerate() {
+            if placed[*index] {
+                let c = &commits[*index];
                 rows.push(Row {
                     id: c.id.clone(),
                     short: c.id.get(..7).unwrap_or(&c.id).to_string(),
                     title: c.title.clone(),
-                    lane: lanes[index],
+                    lane: lanes[*index],
                 });
+
+                for parent in &c.parents {
+                    let Some(p_index) = commit_index.get(parent) else {
+                        continue;
+                    };
+                    let Some(p_row) = row_ids.iter().position(|i| i.eq(p_index)) else {
+                        continue;
+                    };
+                    let edge = Edge {
+                        child_lane: lanes[*index],
+                        child_row: i,
+                        parent_lane: lanes[*p_index],
+                        parent_row: p_row,
+                    };
+                    edges.push(edge);
+                }
             }
         }
 
