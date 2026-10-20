@@ -10,6 +10,7 @@
 
 **Decisions:**
 - gix 0.87 → 0.89 (spec says "0.87 line"; 0.89 unifies fallible APIs on one boxed `gix::Error`, so `RepoError` wraps sites, not types — accepted, spec line now reads "0.8x line").
+- When an untracked commit's first parent is already reserved in another lane, keep the existing lane and let the new commit's lane continue to the next unreserved parent; revisit after the manual graph check if the resulting merge shape looks odd.
 
 ## Manual checks (UI behaviour, checked by hand — no automated UI tests per spec)
 

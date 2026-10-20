@@ -37,11 +37,10 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         gix::traverse::commit::simple::CommitTimeOrder::NewestFirst,
     ));
 
-    let mut commit_iter = configured_walk.all().map_err(RepoError::Walk)?;
+    let commit_iter = configured_walk.all().map_err(RepoError::Walk)?;
 
     let mut commits: Vec<Commit> = Vec::new();
-
-    while let Some(walk_result) = commit_iter.next() {
+    for walk_result in commit_iter {
         let info = walk_result.map_err(RepoError::NoCommitInfo)?;
         let commit = repo
             .find_commit(info.id)

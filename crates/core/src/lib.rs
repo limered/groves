@@ -94,56 +94,67 @@ impl Pane {
         let mut reserved_lanes: Vec<i32> = Vec::new();
         reserved_lanes.push(head_index as i32);
         for id in &row_ids {
-            match reserved_lanes.iter().position(|i| i.eq(&((*id) as i32))) {
-                None => {
-                    lanes[*id] = match reserved_lanes.iter().position(|i| *i == -1) {
-                        None => reserved_lanes.len(),
-                        Some(i) => i,
+            let mut expected_ids: Vec<usize> = Vec::new();
+            for (i, index) in reserved_lanes.iter().enumerate() {
+                if index.eq(&((*id) as i32)) {
+                    expected_ids.push(i);
+                }
+            }
+            if expected_ids.is_empty() {
+                let free_lane = match reserved_lanes.iter().position(|i| *i == -1) {
+                    None => reserved_lanes.len(),
+                    Some(i) => i,
+                };
+                lanes[*id] = free_lane;
+                placed[*id] = true;
+                for p in &commits[*id].parents {
+                    let Some(p_id) = commit_index.get(p) else {
+                        continue;
                     };
-                    placed[*id] = true;
-                    for p in &commits[*id].parents {
-                        let Some(p_id) = commit_index.get(p) else {
-                            continue;
-                        };
-                        match reserved_lanes.iter().position(|i| *i == -1) {
-                            None => reserved_lanes.push(*p_id as i32),
-                            Some(i) => {
-                                reserved_lanes[i] = *p_id as i32;
-                            }
+                    if reserved_lanes.contains(&(*p_id as i32)) {
+                        continue;
+                    }
+                    match reserved_lanes.iter().position(|i| *i == -1) {
+                        None => reserved_lanes.push(*p_id as i32),
+                        Some(i) => {
+                            reserved_lanes[i] = *p_id as i32;
                         }
                     }
                 }
-                Some(i) => {
-                    lanes[*id] = i;
-                    placed[*id] = true;
-                    let parents = &commits[*id].parents;
-                    if parents.is_empty() {
-                        continue;
-                    }
-                    let Some(p_id) = commit_index.get(&parents[0]) else {
-                        continue;
-                    };
-                    reserved_lanes[i] = *p_id as i32;
+                continue;
+            }
+            let Some(smallest_id) = expected_ids.iter().min() else {
+                continue;
+            };
+            lanes[*id] = *smallest_id;
+            placed[*id] = true;
+            // rmove all expected (split)
+            for id in &expected_ids {
+                reserved_lanes[*id] = -1;
+            }
+            let parents = &commits[*id].parents;
+            if parents.is_empty() {
+                continue;
+            }
+            // replace deleted position with first parent
+            let Some(p_id) = commit_index.get(&parents[0]) else {
+                continue;
+            };
+            reserved_lanes[*smallest_id] = *p_id as i32;
 
-                    // merge
-                    if parents.len() == 2 {
-                        let Some(p_id) = commit_index.get(&parents[1]) else {
-                            continue;
-                        };
-                        match reserved_lanes.iter().position(|i| *i == -1) {
-                            None => reserved_lanes.push(*p_id as i32),
-                            Some(i) => {
-                                reserved_lanes[i] = *p_id as i32;
-                            }
-                        }
+            // add other parents on free slots (merge)
+            for parent in parents.iter().skip(1) {
+                let Some(p_id) = commit_index.get(parent) else {
+                    continue;
+                };
+                if reserved_lanes.contains(&(*p_id as i32)) {
+                    continue;
+                }
+                match reserved_lanes.iter().position(|i| *i == -1) {
+                    None => reserved_lanes.push(*p_id as i32),
+                    Some(i) => {
+                        reserved_lanes[i] = *p_id as i32;
                     }
-
-                    // split
-                    let Some(second_i) = reserved_lanes.iter().position(|i| i.eq(&((*id) as i32)))
-                    else {
-                        continue;
-                    };
-                    reserved_lanes[second_i] = -1;
                 }
             }
         }
