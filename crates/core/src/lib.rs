@@ -20,7 +20,7 @@ pub struct Row {
     pub title: String,
     pub lane: usize,
 }
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Edge {
     pub child_row: usize,
     pub parent_row: usize,

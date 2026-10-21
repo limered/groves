@@ -2082,6 +2082,7 @@ dependencies = [
  "groves-core",
  "groves-repo",
  "groves-testkit",
+ "itertools",
  "thiserror 2.0.21",
 ]
 
