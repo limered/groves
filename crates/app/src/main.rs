@@ -105,7 +105,8 @@ impl eframe::App for GrovesApp {
                                     ];
                                     if end_y - start_y > 1.1 * ROW_HEIGHT_PX {
                                         if edge.is_merge {
-                                            let helper_y = calc_y(top, range_start, edge.child_row+1);
+                                            let helper_y =
+                                                calc_y(top, range_start, edge.child_row + 1);
                                             painter.line_segment(
                                                 [
                                                     Pos2::new(end_x, helper_y),
@@ -121,7 +122,7 @@ impl eframe::App for GrovesApp {
                                             ];
                                         } else {
                                             let helper_y =
-                                                calc_y(top, range_start, edge.parent_row-1);
+                                                calc_y(top, range_start, edge.parent_row - 1);
                                             painter.line_segment(
                                                 [
                                                     Pos2::new(start_x, start_y),
