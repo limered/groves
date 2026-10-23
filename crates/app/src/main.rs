@@ -39,11 +39,12 @@ impl eframe::App for GrovesApp {
                             let top = resp.rect.top();
                             let left = resp.rect.left();
 
-                            let font = FontId::proportional(13.0);
+                            let font = FontId::monospace(13.0);
 
                             let mut all_relevant_edges: HashSet<&Edge> = HashSet::new();
                             let from = range.start.saturating_sub(1);
                             for row_id in from..range.end.min(pane.rows().len()) {
+                                // Better calculation for gap edges
                                 let relevant_edges: Vec<&Edge> = pane
                                     .edges()
                                     .iter()
@@ -51,31 +52,43 @@ impl eframe::App for GrovesApp {
                                     .collect();
                                 all_relevant_edges.extend(relevant_edges.clone());
                             }
+
+                            // draw texts
                             for row_id in range.clone() {
                                 let row = &pane.rows()[row_id];
                                 painter.text(
                                     Pos2::new(
-                                        left + 8.0 + pane.graph_width_px(),
-                                        top + (row_id - range.start) as f32 * row_height
-                                            + row_height / 2.0,
+                                        calc_x(left, 8.0 + pane.graph_width_px(), 0),
+                                        calc_y(top, range.start, row_id),
                                     ),
                                     Align2::LEFT_CENTER,
                                     &row.short,
                                     font.clone(),
                                     FG,
                                 );
+                                painter.text(
+                                    Pos2::new(
+                                        calc_x(
+                                            left,
+                                            8.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
+                                            0,
+                                        ),
+                                        calc_y(top, range.start, row_id),
+                                    ),
+                                    Align2::LEFT_CENTER,
+                                    &row.title,
+                                    font.clone(),
+                                    FG,
+                                );
                             }
 
+                            // lines
                             let range_start = row_range.start;
                             for edge in all_relevant_edges.iter() {
-                                let start_y = top
-                                    + (edge.child_row as f32 - range_start as f32) * row_height
-                                    + row_height * 0.5;
-                                let end_y = top
-                                    + (edge.parent_row as f32 - range_start as f32) * row_height
-                                    + row_height * 0.5;
-                                let start_x = left + 8.0 + edge.child_lane as f32 * LANE_WIDTH_PX;
-                                let end_x = left + 8.0 + edge.parent_lane as f32 * LANE_WIDTH_PX;
+                                let start_y = calc_y(top, range_start, edge.child_row);
+                                let end_y = calc_y(top, range_start, edge.parent_row);
+                                let start_x = calc_x(left, 8.0, edge.child_lane);
+                                let end_x = calc_x(left, 8.0, edge.parent_lane);
 
                                 let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
                                 if start_x == end_x {
@@ -84,12 +97,46 @@ impl eframe::App for GrovesApp {
                                         st,
                                     );
                                 } else {
-                                    let pts = [
+                                    let mut pts = [
                                         Pos2::new(start_x, start_y),
                                         Pos2::new(start_x, start_y + row_height * 0.55),
                                         Pos2::new(end_x, end_y - row_height * 0.55),
                                         Pos2::new(end_x, end_y),
                                     ];
+                                    if end_y - start_y > 1.1 * ROW_HEIGHT_PX {
+                                        if edge.is_merge {
+                                            let helper_y = calc_y(top, range_start, edge.child_row+1);
+                                            painter.line_segment(
+                                                [
+                                                    Pos2::new(end_x, helper_y),
+                                                    Pos2::new(end_x, end_y),
+                                                ],
+                                                st,
+                                            );
+                                            pts = [
+                                                Pos2::new(start_x, start_y),
+                                                Pos2::new(start_x, start_y + row_height * 0.55),
+                                                Pos2::new(end_x, helper_y - row_height * 0.55),
+                                                Pos2::new(end_x, helper_y),
+                                            ];
+                                        } else {
+                                            let helper_y =
+                                                calc_y(top, range_start, edge.parent_row-1);
+                                            painter.line_segment(
+                                                [
+                                                    Pos2::new(start_x, start_y),
+                                                    Pos2::new(start_x, helper_y),
+                                                ],
+                                                st,
+                                            );
+                                            pts = [
+                                                Pos2::new(start_x, helper_y),
+                                                Pos2::new(start_x, helper_y + row_height * 0.55),
+                                                Pos2::new(end_x, end_y - row_height * 0.55),
+                                                Pos2::new(end_x, end_y),
+                                            ];
+                                        }
+                                    }
                                     painter.add(
                                         egui::epaint::CubicBezierShape::from_points_stroke(
                                             pts,
@@ -100,6 +147,20 @@ impl eframe::App for GrovesApp {
                                     );
                                 }
                             }
+
+                            // draw dots
+                            for row_id in range.clone() {
+                                let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
+                                let x = calc_x(left, 8.0, pane.rows()[row_id].lane);
+                                let y = calc_y(top, range_start, row_id);
+
+                                painter.circle(
+                                    Pos2::new(x, y),
+                                    3.5,
+                                    Color32::from_rgb(0xFF, 0x0, 0x0),
+                                    st,
+                                );
+                            }
                         },
                     );
                 }
@@ -109,6 +170,14 @@ impl eframe::App for GrovesApp {
             }
         });
     }
+}
+
+fn calc_x(left: f32, margin: f32, lane: usize) -> f32 {
+    left + margin + lane as f32 * LANE_WIDTH_PX
+}
+
+fn calc_y(top: f32, range_start: usize, row: usize) -> f32 {
+    top + (row as f32 - range_start as f32) * ROW_HEIGHT_PX + ROW_HEIGHT_PX * 0.5
 }
 
 fn main() {

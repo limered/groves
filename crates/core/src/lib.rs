@@ -26,6 +26,7 @@ pub struct Edge {
     pub parent_row: usize,
     pub child_lane: usize,
     pub parent_lane: usize,
+    pub is_merge: bool,
 }
 
 #[derive(Debug)]
@@ -183,6 +184,7 @@ impl Pane {
                         child_row: i,
                         parent_lane: lanes[*p_index],
                         parent_row: p_row,
+                        is_merge: c.parents.len() > 1,
                     };
                     edges.push(edge);
                 }
