@@ -155,12 +155,21 @@ impl eframe::App for GrovesApp {
                                 let x = calc_x(left, 8.0, pane.rows()[row_id].lane);
                                 let y = calc_y(top, range_start, row_id);
 
-                                painter.circle(
-                                    Pos2::new(x, y),
-                                    3.5,
-                                    Color32::from_rgb(0xFF, 0x0, 0x0),
-                                    st,
-                                );
+                                if pane.rows()[row_id].is_merge {
+                                    painter.circle(
+                                        Pos2::new(x, y),
+                                        2.0,
+                                        Color32::from_rgb(0x4F, 0xC3, 0xF7),
+                                        st,
+                                    );
+                                } else {
+                                    painter.circle(
+                                        Pos2::new(x, y),
+                                        3.5,
+                                        Color32::from_rgb(0xFF, 0x0, 0x0),
+                                        st,
+                                    );
+                                }
                             }
                         },
                     );

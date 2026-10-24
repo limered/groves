@@ -19,6 +19,7 @@ pub struct Row {
     pub short: String,
     pub title: String,
     pub lane: usize,
+    pub is_merge: bool,
 }
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Edge {
@@ -170,6 +171,7 @@ impl Pane {
                     short: c.id.get(..7).unwrap_or(&c.id).to_string(),
                     title: c.title.clone(),
                     lane: lanes[*index],
+                    is_merge: c.parents.len() > 1,
                 });
 
                 for parent in &c.parents {
