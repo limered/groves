@@ -1,11 +1,11 @@
 // Emil owns this file — ticket 01 will add the eframe app that opens a repo
 // path from the CLI args and lists its commits (or shows the open error).
 
-use std::{collections::HashSet, path::Path};
+use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
-use groves_core::{Edge, LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
+use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
 const FG: Color32 = Color32::from_rgb(0xD8, 0xDC, 0xE3);
@@ -41,18 +41,6 @@ impl eframe::App for GrovesApp {
 
                             let font = FontId::monospace(13.0);
 
-                            let mut all_relevant_edges: HashSet<&Edge> = HashSet::new();
-                            let from = range.start.saturating_sub(1);
-                            for row_id in from..range.end.min(pane.rows().len()) {
-                                // Better calculation for gap edges
-                                let relevant_edges: Vec<&Edge> = pane
-                                    .edges()
-                                    .iter()
-                                    .filter(|e| e.child_row.le(&row_id) && row_id.lt(&e.parent_row))
-                                    .collect();
-                                all_relevant_edges.extend(relevant_edges.clone());
-                            }
-
                             // draw texts
                             for row_id in range.clone() {
                                 let row = &pane.rows()[row_id];
@@ -84,7 +72,12 @@ impl eframe::App for GrovesApp {
 
                             // lines
                             let range_start = row_range.start;
-                            for edge in all_relevant_edges.iter() {
+                            for edge in pane.edges().iter() {
+                                if edge.parent_row <= range.start.saturating_sub(1)
+                                    || edge.child_row >= row_range.end
+                                {
+                                    continue;
+                                }
                                 let start_y = calc_y(top, range_start, edge.child_row);
                                 let end_y = calc_y(top, range_start, edge.parent_row);
                                 let start_x = calc_x(left, 8.0, edge.child_lane);

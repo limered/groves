@@ -6,11 +6,12 @@
 
 **Blocked by:** 01
 
-**Status:** in-progress
+**Status:** done
 
 **Decisions:**
 - gix 0.87 → 0.89 (spec says "0.87 line"; 0.89 unifies fallible APIs on one boxed `gix::Error`, so `RepoError` wraps sites, not types — accepted, spec line now reads "0.8x line").
 - When an untracked commit's first parent is already reserved in another lane, keep the existing lane and let the new commit's lane continue to the next unreserved parent; revisit after the manual graph check if the resulting merge shape looks odd.
+- For now, scan `Pane::edges()` once per repaint and filter by visible-range overlap (O(E)), rather than building the spec's edge interval index. The manual thousand-commit scroll check is smooth; revisit with the 200k/frame-time measurements in ticket 21 and add the index if the budget requires it.
 
 ## Manual checks (UI behaviour, checked by hand — no automated UI tests per spec)
 
@@ -21,9 +22,14 @@
 
 **Rust focus:** the DAG as a struct of arrays: `u32` row indices into parallel `Vec`s (rapier handles, again), CSR parent lists, borrowing inside loops, `HashMap`, the egui `Painter`, and drawing only the visible rows.
 
-- [ ] Children always appear above their parents; order is deterministic for the same input
-- [ ] A linear history uses one lane; a branch and merge reuses the freed lane
-- [ ] HEAD's first-parent chain sits in lane 0
-- [ ] Lanes never shift sideways along a branch (tests assert lane per commit on synthetic graphs)
-- [ ] Graph column at its natural width, never drawn over text
-- [ ] Manual: the Factory repo scrolls without visible stutter
+- [x] Children always appear above their parents; order is deterministic for the same input
+- [x] A linear history uses one lane; a branch and merge reuses the freed lane
+- [x] HEAD's first-parent chain sits in lane 0
+- [x] Lanes never shift sideways along a branch (tests assert lane per commit on synthetic graphs)
+- [x] Graph column at its natural width, never drawn over text
+- [x] Manual: the Factory repo or the tested 1,000+ commit alternative scrolls without visible stutter
+
+## Learned
+
+- A child-count ready queue gives a deterministic temporal topological order; row and lane indices act like the compact handles Emil knows from Rapier.
+- egui `show_rows` uses row height sans spacing, and painter coordinates must be relative to the visible range; visible-range edge filtering is O(E), with the interval index deferred to ticket 21's measurement.

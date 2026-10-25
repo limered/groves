@@ -173,7 +173,6 @@ impl Pane {
                     lane: lanes[*index],
                     is_merge: c.parents.len() > 1,
                 });
-
                 for parent in &c.parents {
                     let Some(p_index) = commit_index.get(parent) else {
                         continue;
