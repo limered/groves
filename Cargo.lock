@@ -2075,7 +2075,7 @@ dependencies = [
 
 [[package]]
 name = "groves-app"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "eframe",
  "egui",
@@ -2088,14 +2088,14 @@ dependencies = [
 
 [[package]]
 name = "groves-core"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "groves-testkit",
 ]
 
 [[package]]
 name = "groves-repo"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "gix",
  "groves-core",
@@ -2105,7 +2105,7 @@ dependencies = [
 
 [[package]]
 name = "groves-testkit"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "groves-core",
 ]
