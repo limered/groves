@@ -80,6 +80,17 @@ I work across several git repositories at once. Each has multiple worktrees, hun
 48. As a developer, I want horizontal **Age lines** at 3h, 1d, 1w and 3w (committer date), each drawn once above the first row from the top older than its threshold and labelled at the right edge (`── 1d ago`), so that I can see how fresh work is.
 49. As a developer, I want thresholds that no row reaches skipped, and out-of-order rows ignored, so that lines are honest and uncluttered.
 
+### Author groups
+
+_Added after the initial spec (grilling, ticket 05b). Numbered 75+ so that existing story numbers stay stable._
+
+75. As a developer, I want linear runs of 3 or more commits by the same author in one lane folded into one **Author group** row, collapsed by default, so that the graph is shorter and repeated author info doesn't add noise.
+76. As a developer, I want a collapsed group drawn as a ring with `×N`, and on hover `Emil · 5 commits · 2h–6h ago` with the newest title below, so that I know what is folded without opening it.
+77. As a developer, I want clicking a collapsed group to expand it, and Shift+click to expand it and pin all its commits, so that I can inspect or compare an author's run in one step.
+78. As a developer, I want an expanded group wrapped in a light border with a **Collapse marker** at its top, and clicks on its commits to pin them as usual, so that I can see which commits belong together and fold them again.
+79. As a developer, I want `g` to collapse or expand all groups of the focused pane, so that I can switch between the compact and the full view.
+80. As a developer, I want the clicked row to stay in place on screen when a group expands or collapses, so that the graph doesn't jump under my mouse.
+
 ### Refresh and fetch
 
 50. As a developer, I want every open pane in every grove fetched in the background every 5 minutes (first fetch about 10 s after the pane opens), so that remotes stay current.
@@ -157,6 +168,14 @@ I work across several git repositories at once. Each has multiple worktrees, hun
 - Always a full relayout. The prototype measured about 31 ms for 200k synthetic commits with 18 lanes at most.
 - A `ref → lane` hint map is kept in memory across relayouts for stability (not persisted). Scroll position is anchored by SHA.
 
+### Author groups (row folding)
+
+- **Group definition:** a maximal run of ≥ 3 commits in one lane, same interned author id, where each commit is the only child of the next and that commit is its first parent. A group ends at a fork, a merge, a Pill, a Worktree HEAD marker, a tag, or an Age line threshold. The age-threshold rule may be revisited if the extra splits add visual noise.
+- **Post-pass, not layout:** lanes are computed on all commits as before. A separate pure folding step in `core` maps visible rows to commit ranges. Its inputs are the layout, the set of expanded groups and the pin set. Expanding or collapsing never changes lanes and needs no relayout. Age lines, hit-testing, pins and the scroll anchor work on folded rows.
+- **Invariant: a collapsed group never contains a pin.** Collapsing a group (its marker or `g`) unpins every commit inside it. Shift+click on a collapsed group expands it and pins all its commits. A group that would contain a pin after a refresh or filter change starts expanded.
+- **Expanded state** is kept in memory only (not persisted), keyed by the SHA of the group's oldest commit, because that commit stays stable when new commits arrive on top. Groups that no longer exist drop their state silently.
+- Expanding or collapsing keeps the clicked row in place on screen, using the SHA anchor.
+
 ### Refresh
 
 - Local change detection: every 10 s for visible panes, plus on window focus and when a grove becomes visible. The check compares a cheap ref snapshot (mtimes of worktree HEAD files, `packed-refs`, `refs/`), and refs are read fully only when it changed.
@@ -168,7 +187,7 @@ I work across several git repositories at once. Each has multiple worktrees, hun
 - Pill choice per commit: HEAD's branch, then local, then remote. Local + upstream on the same commit collapse into a synced pill. Everything else goes into the `+N` dropdown, which lists branch refs only (no tags).
 - The default ref set as in the glossary. The staleness window comes from `stale_after_days`.
 - Age lines as in user stories 48–49.
-- Single-key pane bindings `t s f d m r Esc` (plus `Shift+R`). Fixed `Alt` keymap as in user stories 6–13. Nothing is configurable.
+- Single-key pane bindings `t s f d m g r Esc` (plus `Shift+R`). Fixed `Alt` keymap as in user stories 6–13. Nothing is configurable.
 
 ### Persistence
 

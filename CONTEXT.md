@@ -17,6 +17,8 @@ A read-only commit-graph viewer. The name: nine groves, each a group of reposito
 - **Pin**: a commit whose commit info stays visible; clicking a commit toggles its pin. A pane holds any number of pins.
 - **Pin set**: all pinned commits of a pane; the detail panel describes the pin set, not a single commit.
 - **Age line**: a horizontal line across the graph marking where commits become older than 3h, 1d, 1w or 3w (by committer date).
+- **Author group**: a linear run of 3 or more commits by the same author in one lane, folded into one row (a ring with `×N`). It is collapsed by default and expands on click. A collapsed group never contains a pin.
+- **Collapse marker**: the marker at the top of an expanded author group's border. It folds the group again and unpins the commits inside it.
 
 ## Flagged ambiguities
 

@@ -62,5 +62,8 @@ fn merge_fixture_reports_both_parents() {
         .iter()
         .filter(|e| e.child_row == merge_row)
         .count();
-    assert_eq!(edge_count, 2, "both merge parents must be visibly connected");
+    assert_eq!(
+        edge_count, 2,
+        "both merge parents must be visibly connected"
+    );
 }

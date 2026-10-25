@@ -15,48 +15,48 @@ impl CommitSource for Repo {
 #[derive(Error, Debug)]
 pub enum RepoError {
     #[error("can't open repo: {0}")]
-    NotARepository(#[source] Box<gix::open::Error>),
+    NotARepository(#[source] gix::Error),
     #[error("repository has no head")]
-    NoHead(#[from] gix::reference::head_commit::Error),
-    #[error("head has no commits")]
-    NoCommits(#[from] gix::revision::walk::Error),
+    NoHead(#[source] gix::Error),
     #[error("error retrieving commit info")]
-    NoCommitInfo(#[from] gix::revision::walk::iter::Error),
+    NoCommitInfo(#[source] gix::Error),
     #[error("commit could not be found")]
-    CantFindCommit(#[from] gix::object::find::existing::with_conversion::Error),
-}
-
-impl From<gix::open::Error> for RepoError {
-    fn from(error: gix::open::Error) -> Self {
-        Self::NotARepository(Box::new(error))
-    }
+    CantFindCommit(#[source] gix::Error),
+    #[error("can't traverse commit tree")]
+    Walk(#[source] gix::Error),
+    #[error("commit has no message {0}")]
+    NoCommitMessage(#[source] gix::Error),
 }
 
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
-    let repo = gix::open(path)?;
-    let head = repo.head_commit()?;
+    let repo = gix::open(path).map_err(RepoError::NotARepository)?;
+    let head = repo.head_commit().map_err(RepoError::NoHead)?;
 
-    let head_commits = head.ancestors().all()?;
+    let walk_platform = repo.rev_walk([head.id]);
+    let configured_walk = walk_platform.sorting(gix::revision::walk::Sorting::ByCommitTime(
+        gix::traverse::commit::simple::CommitTimeOrder::NewestFirst,
+    ));
 
-    let commits = head_commits
-        .map(|item| -> Result<Commit, RepoError> {
-            let info = item?;
-            let commit = repo.find_commit(info.id)?;
-            let title = commit
-                .message_raw()
-                .unwrap_or_default()
-                .to_string()
-                .lines()
-                .next()
-                .unwrap_or("")
-                .to_owned();
+    let commit_iter = configured_walk.all().map_err(RepoError::Walk)?;
 
-            Ok(Commit {
-                id: info.id.to_string(),
-                title,
-            })
-        })
-        .collect::<Result<_, _>>()?;
+    let mut commits: Vec<Commit> = Vec::new();
+    for walk_result in commit_iter {
+        let info = walk_result.map_err(RepoError::NoCommitInfo)?;
+        let commit = repo
+            .find_commit(info.id)
+            .map_err(RepoError::CantFindCommit)?;
+
+        let message = commit.message().map_err(RepoError::NoCommitMessage)?;
+        let summary = message.summary();
+
+        commits.push(Commit {
+            parents: info.parent_ids.iter().map(|id| id.to_string()).collect(),
+            time: info.commit_time(),
+            id: info.id.to_string(),
+            title: summary.to_string(),
+            refs: Vec::new(),
+        });
+    }
 
     Ok(Repo { commits })
 }

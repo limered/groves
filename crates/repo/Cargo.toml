@@ -9,7 +9,7 @@ path = "src/lib.rs"
 
 [dependencies]
 groves-core = { path = "../core" }
-gix = "0.87"
+gix = "0.89"
 thiserror = { workspace = true }
 
 [dev-dependencies]

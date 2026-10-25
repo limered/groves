@@ -37,8 +37,8 @@
 //! which row, which lane each row's node sits in, how wide the graph column
 //! is — never internal DAG storage.
 
-use groves_core::{LANE_WIDTH_PX, ROW_HEIGHT_PX, Pane};
-use groves_testkit::SyntheticSource;
+use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
+use groves_testkit::{GraphCommit, SyntheticSource};
 use std::collections::HashMap;
 
 fn lanes_by_id(pane: &Pane) -> HashMap<String, usize> {
@@ -87,6 +87,49 @@ fn shuffled_input_still_draws_children_above_parents() {
 }
 
 #[test]
+fn second_parent_branch_does_not_jump_above_head() {
+    // A side commit is merged into HEAD, and its parent is also HEAD's
+    // first parent: h -> (m1, s1), s1 -> m1 -> m0. This is the shape in
+    // which inserting the whole first-parent chain before the side branch
+    // can accidentally put s1 above h.
+    let source = SyntheticSource::for_graph(vec![
+        GraphCommit {
+            id: "h".to_string(),
+            parents: vec!["m1".to_string(), "s1".to_string()],
+            title: "Merge side work".to_string(),
+            time: 400,
+            refs: vec!["HEAD".to_string()],
+        },
+        GraphCommit {
+            id: "s1".to_string(),
+            parents: vec!["m1".to_string()],
+            title: "Side work".to_string(),
+            time: 300,
+            refs: vec![],
+        },
+        GraphCommit {
+            id: "m1".to_string(),
+            parents: vec!["m0".to_string()],
+            title: "Main work".to_string(),
+            time: 200,
+            refs: vec![],
+        },
+        GraphCommit {
+            id: "m0".to_string(),
+            parents: vec![],
+            title: "Root".to_string(),
+            time: 100,
+            refs: vec![],
+        },
+    ]);
+
+    let pane = Pane::load(&source);
+    let order: Vec<&str> = pane.rows().iter().map(|row| row.id.as_str()).collect();
+
+    assert_eq!(order, vec!["h", "s1", "m1", "m0"]);
+}
+
+#[test]
 fn linear_history_uses_a_single_lane() {
     let pane = Pane::load(&SyntheticSource::linear_three());
 
@@ -101,7 +144,11 @@ fn branch_and_merge_reuses_the_freed_lane() {
     let pane = Pane::load(&SyntheticSource::branch_and_merge());
     let lanes = lanes_by_id(&pane);
 
-    assert_eq!(pane.lane_count(), 2, "one side branch needs two lanes, not more");
+    assert_eq!(
+        pane.lane_count(),
+        2,
+        "one side branch needs two lanes, not more"
+    );
     // The merge tip and the whole main first-parent chain share lane 0 …
     assert_eq!(lanes["m3"], 0);
     assert_eq!(lanes["m1"], 0);
@@ -118,7 +165,10 @@ fn head_first_parent_chain_owns_lane_zero() {
     let lanes = lanes_by_id(&pane);
 
     assert_eq!(lanes["m2"], 0, "HEAD tip sits in lane 0");
-    assert_eq!(lanes["m1"], 0, "HEAD's first-parent chain never leaves lane 0");
+    assert_eq!(
+        lanes["m1"], 0,
+        "HEAD's first-parent chain never leaves lane 0"
+    );
     assert_eq!(lanes["m0"], 0);
     assert_eq!(lanes["s1"], 1, "the newer side tip does not steal lane 0");
 }
@@ -146,7 +196,7 @@ fn lanes_never_shift_sideways_along_a_branch() {
     targets.sort();
     assert_eq!(
         targets,
-        vec![(row_of(&pane, "m1"), 0), (row_of(&pane, "s1"), 1)],
+        vec![(row_of(&pane, "s1"), 1), (row_of(&pane, "m1"), 0)],
         "the merge tip visibly connects to both parents' lanes"
     );
 }
