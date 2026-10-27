@@ -1,4 +1,5 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
+use std::time::SystemTime;
 
 // Emil owns this file — ticket 01 will add `CommitSource`, `Commit`, `Row` and `Pane` here.
 pub const ROW_HEIGHT_PX: f32 = 22.0;
@@ -75,8 +76,11 @@ pub struct Pane {
 
 impl Pane {
     pub fn load(source: &impl CommitSource) -> Self {
+        let now = SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .unwrap()
+            .as_secs() as i64;
         let commits = source.commits();
-
         let mut placed: Vec<bool> = Vec::new();
         let mut lanes: Vec<usize> = Vec::new();
         let mut row_ids: Vec<usize> = Vec::new();
@@ -85,18 +89,40 @@ impl Pane {
         let mut rows: Vec<Row> = Vec::new();
         let mut edges = Vec::new();
 
+        // filter refs for the tips-commits
+        let mut not_stale_ref_ids: HashSet<String> = source
+            .ref_snapshot()
+            .refs()
+            .iter()
+            .filter(|r| is_stale(r.tip_time, now, 14))
+            .map(|r| r.target.clone())
+            .collect();
+
         // index commit-id to index
         let mut commit_index: HashMap<String, usize> = HashMap::new();
-        let mut head_index: usize = 0; // fallback if head can't be found
         for (i, c) in commits.iter().enumerate() {
             commit_index.insert(c.id.clone(), i);
-            if c.refs.contains(&"HEAD".to_string()) {
-                head_index = i;
-            }
             placed.push(false);
             lanes.push(1);
             child_count.push(0);
         }
+
+        // add only children of the tips into collection
+        let mut work_queue: Vec<usize> = not_stale_ref_ids
+            .iter()
+            .map(|id| commit_index.get(id).unwrap().clone())
+            .collect();
+        while !work_queue.is_empty() {
+            let c_id = work_queue.pop().unwrap();
+            let parents = commits[c_id].parents.clone();
+            for p in &parents {
+                not_stale_ref_ids.insert(p.clone());
+                let p_id = commit_index.get(p).unwrap();
+                work_queue.push(*p_id);
+            }
+        }
+
+        // TODO: filter full commits to the actual list
 
         // collect children per commit
         for c in &commits {
@@ -108,6 +134,7 @@ impl Pane {
             }
         }
 
+        let mut head_index: usize = 0; // fallback if head can't be found
         // Rows
         let mut queue: Vec<usize> = (0..commits.len())
             .filter(|i| child_count[*i] == 0)
@@ -154,12 +181,7 @@ impl Pane {
                     if reserved_lanes.contains(&(*p_id as i32)) {
                         continue;
                     }
-                    match reserved_lanes.iter().position(|i| *i == -1) {
-                        None => reserved_lanes.push(*p_id as i32),
-                        Some(i) => {
-                            reserved_lanes[i] = *p_id as i32;
-                        }
-                    }
+                    Self::insert_at_free_position(&mut reserved_lanes, p_id);
                 }
                 continue;
             }
@@ -190,16 +212,11 @@ impl Pane {
                 if reserved_lanes.contains(&(*p_id as i32)) {
                     continue;
                 }
-                match reserved_lanes.iter().position(|i| *i == -1) {
-                    None => reserved_lanes.push(*p_id as i32),
-                    Some(i) => {
-                        reserved_lanes[i] = *p_id as i32;
-                    }
-                }
+                Self::insert_at_free_position(&mut reserved_lanes, p_id);
             }
         }
 
-        // instatces
+        // instances
         for (i, index) in row_ids.iter().enumerate() {
             if placed[*index] {
                 let c = &commits[*index];
@@ -231,6 +248,16 @@ impl Pane {
 
         Pane { rows, edges }
     }
+
+    fn insert_at_free_position(reserved_lanes: &mut Vec<i32>, p_id: &usize) {
+        match reserved_lanes.iter().position(|i| *i == -1) {
+            None => reserved_lanes.push(*p_id as i32),
+            Some(i) => {
+                reserved_lanes[i] = *p_id as i32;
+            }
+        }
+    }
+
     pub fn rows(&self) -> &[Row] {
         &self.rows
     }

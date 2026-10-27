@@ -167,3 +167,55 @@ fn local_upstream_and_origin_head_are_included_even_when_their_tips_are_old() {
         ])
     );
 }
+
+#[test]
+fn a_merged_stale_branchs_line_is_still_drawn() {
+    // The stale branch was merged into main: the merge commit is fresh, the
+    // merged commits are old. main reaches them, so they stay drawn —
+    // staleness hides a branch's *tip*, never commits other refs reach.
+    let now = seconds_ago(0);
+    let source = SyntheticSource::for_graph_with_refs(
+        vec![
+            commit("m4", &["m3", "st1"], now - 30),
+            commit("m3", &["m0"], now - 90),
+            commit("m0", &[], now - 120),
+            commit("st1", &["st0"], now - 15 * DAY),
+            commit("st0", &[], now - 16 * DAY),
+        ],
+        vec![
+            git_ref("HEAD", "m4", RefKind::WorktreeHead, now - 30, None),
+            git_ref("main", "m4", RefKind::Local, now - 30, Some("origin/main")),
+            git_ref(
+                "origin/main",
+                "m4",
+                RefKind::Remote {
+                    remote: "origin".to_string(),
+                },
+                now - 30,
+                None,
+            ),
+            git_ref(
+                "origin/stale",
+                "st1",
+                RefKind::Remote {
+                    remote: "origin".to_string(),
+                },
+                now - 15 * DAY,
+                None,
+            ),
+        ],
+    );
+
+    let pane = Pane::load(&source);
+
+    assert_eq!(
+        visible_ids(&pane),
+        HashSet::from(["m4", "m3", "m0", "st1", "st0"]),
+        "main reaches the stale branch through the merge, so its line stays"
+    );
+    assert_eq!(
+        pane.lane_count(),
+        2,
+        "the merged line hangs off the merge's side lane; it must not widen the graph"
+    );
+}
