@@ -13,6 +13,37 @@ pub struct Commit {
     pub refs: Vec<String>,
 }
 
+#[derive(Debug, Clone)]
+pub enum RefKind {
+    Local,
+    Remote { remote: String },
+    Tag,
+    WorktreeHead,
+}
+
+#[derive(Debug, Clone)]
+pub struct GitRef {
+    pub name: String,
+    pub target: String,
+    pub kind: RefKind,
+    pub tip_time: i64,
+    pub upstream: Option<String>,
+}
+
+#[derive(Default)]
+pub struct RefSnapshot {
+    refs: Vec<GitRef>,
+}
+
+impl RefSnapshot {
+    pub fn new(refs: Vec<GitRef>) -> Self {
+        Self { refs }
+    }
+    pub fn refs(&self) -> &[GitRef] {
+        &self.refs
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct Row {
     pub id: String,
@@ -213,4 +244,5 @@ impl Pane {
 
 pub trait CommitSource {
     fn commits(&self) -> Vec<Commit>;
+    fn ref_snapshot(&self) -> &RefSnapshot;
 }
