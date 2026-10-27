@@ -81,6 +81,7 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         });
         ref_commits.insert(name ,wkt_head_commit.id);
     }
+    println!("{:?}", wkt_heads);
 
     let walk_platform = repo.rev_walk([head.id]);
     let configured_walk = walk_platform.sorting(gix::revision::walk::Sorting::ByCommitTime(
