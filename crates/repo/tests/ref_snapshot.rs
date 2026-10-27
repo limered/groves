@@ -17,6 +17,12 @@ fn open_reports_loose_packed_upstream_symbolic_and_tag_refs() {
     let repo = groves_repo::open(&init_ref_fixture_repo()).expect("fixture must open");
     let refs = repo.ref_snapshot().refs();
 
+    assert!(
+        refs.iter()
+            .all(|git_ref| !git_ref.name.starts_with("refs/")),
+        "refs are reported under short names like 'main' and 'origin/main'"
+    );
+
     let main = ref_named(&repo, "main");
     assert!(matches!(&main.kind, RefKind::Local));
     assert_eq!(main.upstream.as_deref(), Some("origin/main"));
@@ -29,6 +35,10 @@ fn open_reports_loose_packed_upstream_symbolic_and_tag_refs() {
     let origin_head = ref_named(&repo, "origin/HEAD");
     assert!(matches!(&origin_head.kind, RefKind::Remote { .. }));
     assert_eq!(origin_head.target, ref_named(&repo, "origin/main").target);
+
+    let head = ref_named(&repo, "HEAD");
+    assert!(matches!(&head.kind, RefKind::WorktreeHead));
+    assert_eq!(head.target, ref_named(&repo, "main").target);
 
     let tag = ref_named(&repo, "v1");
     assert!(matches!(&tag.kind, RefKind::Tag));

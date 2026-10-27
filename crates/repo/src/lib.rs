@@ -1,7 +1,6 @@
-use gix::{ObjectId, objs::kind};
 // Emil owns this file — ticket 01 will add `open(path)` plus the `CommitSource` impl here.
 use groves_core::{Commit, CommitSource, GitRef, RefKind, RefSnapshot};
-use std::{any::Any, collections::HashMap, path::Path};
+use std::{collections::HashMap, path::Path};
 use thiserror::Error;
 
 #[derive(Default)]
@@ -24,7 +23,7 @@ pub enum RepoError {
     NotARepository(#[source] gix::Error),
     #[error("repository has no head")]
     NoHead(#[source] gix::Error),
-    #[error("coudn't get refs in repo, error: {0}")]
+    #[error("couldn't get refs in repo, error: {0}")]
     Refs(#[source] gix::Error),
     #[error("error retrieving commit info")]
     NoCommitInfo(#[source] gix::Error),
@@ -79,7 +78,7 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
             tip_time: time,
             upstream: wkt_upstream,
         });
-        ref_commits.insert(name ,wkt_head_commit.id);
+        ref_commits.insert(name, wkt_head_commit.id);
     }
     println!("{:?}", wkt_heads);
 

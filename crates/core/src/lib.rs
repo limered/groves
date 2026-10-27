@@ -4,6 +4,12 @@ use std::collections::HashMap;
 pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
 
+pub const DAY_SECONDS: i64 = 24 * 60 * 60;
+
+pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
+    now - tip_time > stale_after_days * DAY_SECONDS
+}
+
 #[derive(Clone)]
 pub struct Commit {
     pub id: String,
