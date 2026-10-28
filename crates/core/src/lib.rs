@@ -93,9 +93,6 @@ impl Pane {
         let now = Pane::stamp_now();
         let commits = source.commits();
         let mut commit_index: HashMap<String, usize> = Pane::build_commit_index(&commits);
-        let mut lanes: Vec<usize> = Vec::new();
-        let mut row_ids: Vec<usize> = Vec::new();
-        let mut child_count: Vec<usize> = Vec::new();
 
         let mut rows: Vec<Row> = Vec::new();
         let mut edges = Vec::new();
@@ -118,16 +115,26 @@ impl Pane {
             let c_id = work_queue.pop().unwrap();
             let parents = commits[c_id].parents.clone();
             for p in &parents {
-                not_stale_ref_ids.insert(p.clone());
                 let p_id = commit_index.get(p).unwrap();
                 work_queue.push(*p_id);
+                not_stale_ref_ids.insert(p.clone());
             }
         }
 
-        // TODO: filter full commits to the actual list
+        // TODO: filter full commits not_stale_ref_ids
+        let filtered_commits: Vec<Commit> = commits
+            .into_iter()
+            .filter(|c| not_stale_ref_ids.contains(&c.id))
+            .collect();
+
+        let mut placed: Vec<bool> = vec![false; filtered_commits.len()];
+        let mut lanes: Vec<usize> = vec![0; filtered_commits.len()];
+        let mut row_ids: Vec<usize> = vec![0; filtered_commits.len()];
+        let mut child_count: Vec<usize> = vec![0; filtered_commits.len()];
+        commit_index = Pane::build_commit_index(&filtered_commits);
 
         // collect children per commit
-        for c in &commits {
+        for c in &filtered_commits {
             for p in &c.parents {
                 let Some(p_id) = commit_index.get(p) else {
                     continue;
@@ -137,18 +144,19 @@ impl Pane {
         }
 
         let mut head_index: usize = 0; // fallback if head can't be found
+
         // Rows
-        let mut queue: Vec<usize> = (0..commits.len())
+        let mut queue: Vec<usize> = (0..filtered_commits.len())
             .filter(|i| child_count[*i] == 0)
             .collect();
 
         while !queue.is_empty() {
-            queue.sort_by(|a, b| commits[*a].time.cmp(&commits[*b].time));
+            queue.sort_by(|a, b| filtered_commits[*a].time.cmp(&filtered_commits[*b].time));
             let Some(c) = queue.pop() else {
                 break;
             };
             row_ids.push(c);
-            for p in commits[c].parents.clone() {
+            for p in filtered_commits[c].parents.clone() {
                 let Some(p_id) = commit_index.get(&p) else {
                     continue;
                 };
@@ -176,7 +184,7 @@ impl Pane {
                 };
                 lanes[*id] = free_lane;
                 placed[*id] = true;
-                for p in &commits[*id].parents {
+                for p in &filtered_commits[*id].parents {
                     let Some(p_id) = commit_index.get(p) else {
                         continue;
                     };
@@ -196,7 +204,7 @@ impl Pane {
             for id in &expected_ids {
                 reserved_lanes[*id] = -1;
             }
-            let parents = &commits[*id].parents;
+            let parents = &filtered_commits[*id].parents;
             if parents.is_empty() {
                 continue;
             }
@@ -221,7 +229,7 @@ impl Pane {
         // instances
         for (i, index) in row_ids.iter().enumerate() {
             if placed[*index] {
-                let c = &commits[*index];
+                let c = &filtered_commits[*index];
                 rows.push(Row {
                     id: c.id.clone(),
                     short: c.id.get(..7).unwrap_or(&c.id).to_string(),
