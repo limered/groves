@@ -131,12 +131,24 @@ impl Pane {
         let mut rows: Vec<Row> = Vec::new();
         let mut edges = Vec::new();
 
-        // filter refs for the tips-commits
-        let mut not_stale_ref_ids: HashSet<String> = source
+        let Some(head_ref) = source
             .ref_snapshot()
             .refs()
             .iter()
-            .filter(|r| is_stale(r.tip_time, now, 14))
+            .filter(|r| r.name == "HEAD")
+            .next()
+        else {
+            return Pane::empty();
+        };
+
+        let all_refs = source.ref_snapshot().refs();
+        let refs_without_stale_remotes: Vec<&GitRef> = all_refs
+            .iter()
+            .filter(|r| Pane::should_keep(&r, &all_refs, now))
+            .collect();
+
+        let mut not_stale_ref_ids: HashSet<String> = refs_without_stale_remotes
+            .iter()
             .map(|r| r.target.clone())
             .collect();
 
