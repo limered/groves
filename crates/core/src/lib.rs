@@ -20,7 +20,7 @@ pub struct Commit {
     pub refs: Vec<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub enum RefKind {
     Local,
     Remote { remote: String },
