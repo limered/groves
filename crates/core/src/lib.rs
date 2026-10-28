@@ -177,8 +177,6 @@ impl Pane {
             }
         }
 
-        let mut head_index: usize = 0; // fallback if head can't be found
-
         // Rows
         let mut queue: Vec<usize> = (0..filtered_commits.len())
             .filter(|i| child_count[*i] == 0)
@@ -202,6 +200,10 @@ impl Pane {
         }
 
         // lanes
+        let head_index = match commit_index.get(&head_ref.target) {
+            Some(i) => *i,
+            None => 0,
+        };
         let mut reserved_lanes: Vec<i32> = Vec::new();
         reserved_lanes.push(head_index as i32);
         for id in &row_ids {
