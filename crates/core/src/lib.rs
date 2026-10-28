@@ -75,13 +75,24 @@ pub struct Pane {
 }
 
 impl Pane {
-    pub fn load(source: &impl CommitSource) -> Self {
-        let now = SystemTime::now()
+    fn stamp_now() -> i64 {
+        SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .unwrap()
-            .as_secs() as i64;
+            .as_secs() as i64
+    }
+
+    fn build_commit_index(commits: &Vec<Commit>) -> HashMap<String, usize> {
+        commits
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (c.id.clone(), i))
+            .collect()
+    }
+    pub fn load(source: &impl CommitSource) -> Self {
+        let now = Pane::stamp_now();
         let commits = source.commits();
-        let mut placed: Vec<bool> = Vec::new();
+        let mut commit_index: HashMap<String, usize> = Pane::build_commit_index(&commits);
         let mut lanes: Vec<usize> = Vec::new();
         let mut row_ids: Vec<usize> = Vec::new();
         let mut child_count: Vec<usize> = Vec::new();
@@ -97,15 +108,6 @@ impl Pane {
             .filter(|r| is_stale(r.tip_time, now, 14))
             .map(|r| r.target.clone())
             .collect();
-
-        // index commit-id to index
-        let mut commit_index: HashMap<String, usize> = HashMap::new();
-        for (i, c) in commits.iter().enumerate() {
-            commit_index.insert(c.id.clone(), i);
-            placed.push(false);
-            lanes.push(1);
-            child_count.push(0);
-        }
 
         // add only children of the tips into collection
         let mut work_queue: Vec<usize> = not_stale_ref_ids
