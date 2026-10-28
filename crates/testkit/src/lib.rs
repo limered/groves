@@ -5,8 +5,11 @@
 //! ref names) so `core::Pane` layout tests can assert lanes per commit.
 
 use groves_core::{Commit, CommitSource, GitRef, RefKind, RefSnapshot};
-use std::path::PathBuf;
-use std::process::Command;
+use std::{
+    path::PathBuf,
+    process::Command,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 /// A synthetic source that yields exactly the commits it was built with,
 /// newest first. Drives `core::Pane` without touching git.
@@ -26,17 +29,19 @@ pub struct GraphCommit {
 }
 
 impl SyntheticSource {
-    /// Build from `(full_sha, title)` pairs in newest-first order.
-    /// No parents, no refs — the ticket-01 shape. Kept so the skeleton
-    /// tests keep driving the same facade.
+    /// Build from `(full_sha, title)` pairs in newest-first order, chained
+    /// linearly (each commit's parent is the next-older commit, HEAD on the
+    /// tip) so every commit is reachable from the default ref set.
+    /// Descending times keep the old newest-first order temporal.
     pub fn new(newest_first: Vec<(String, String)>) -> Self {
         let n = newest_first.len();
+        let ids: Vec<String> = newest_first.iter().map(|(id, _)| id.clone()).collect();
         let commits: Vec<Commit> = newest_first
             .into_iter()
             .enumerate()
             .map(|(i, (id, title))| Commit {
                 id,
-                parents: vec![],
+                parents: ids.get(i + 1).map(|p| vec![p.clone()]).unwrap_or_default(),
                 // Descending times keep the old newest-first order temporal.
                 time: (n - i) as i64,
                 title,
@@ -129,12 +134,20 @@ impl SyntheticSource {
         }
     }
 
+    /// Preset times (100–400) are toy values for *relative* order only.
+    /// Since ticket 03 the staleness window compares remote-ref tip times
+    /// against the real clock, so `g` maps them into the recent past of the
+    /// actual wall clock: order-preserving, always inside the window.
     fn g(id: &str, parents: &[&str], title: &str, time: i64, refs: &[&str]) -> GraphCommit {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_secs() as i64;
         GraphCommit {
             id: id.to_string(),
             parents: parents.iter().map(|p| (*p).to_string()).collect(),
             title: title.to_string(),
-            time,
+            time: now - (500 - time),
             refs: refs.iter().map(|r| (*r).to_string()).collect(),
         }
     }
