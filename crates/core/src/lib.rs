@@ -150,12 +150,12 @@ impl Pane {
             let parents = commits[c_id].parents.clone();
             for p in &parents {
                 let p_id = commit_index.get(p).unwrap();
-                work_queue.push(*p_id);
-                not_stale_ref_ids.insert(p.clone());
+                if not_stale_ref_ids.insert(p.clone()) {
+                    work_queue.push(*p_id);
+                }
             }
         }
 
-        // TODO: filter full commits not_stale_ref_ids
         let filtered_commits: Vec<Commit> = commits
             .into_iter()
             .filter(|c| not_stale_ref_ids.contains(&c.id))
@@ -163,7 +163,7 @@ impl Pane {
 
         let mut placed: Vec<bool> = vec![false; filtered_commits.len()];
         let mut lanes: Vec<usize> = vec![0; filtered_commits.len()];
-        let mut row_ids: Vec<usize> = vec![0; filtered_commits.len()];
+        let mut row_ids: Vec<usize> = Vec::new();
         let mut child_count: Vec<usize> = vec![0; filtered_commits.len()];
         commit_index = Pane::build_commit_index(&filtered_commits);
 
