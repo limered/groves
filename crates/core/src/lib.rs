@@ -89,6 +89,40 @@ impl Pane {
             .map(|(i, c)| (c.id.clone(), i))
             .collect()
     }
+
+    fn should_keep(branch: &GitRef, all_refs: &[GitRef], now: i64) -> bool {
+        if branch.kind == RefKind::Tag {
+            return false;
+        }
+        if branch.kind == RefKind::WorktreeHead || branch.kind == RefKind::Local {
+            return true;
+        }
+        // only remotes left
+        if branch.name.contains("HEAD") {
+            return true;
+        }
+        // only remotes without HEAD
+        if all_refs
+            .iter()
+            .find(|r| match &r.upstream {
+                Some(upstream) => upstream.eq(&branch.name),
+                None => false,
+            })
+            .is_some()
+        {
+            return true;
+        }
+        // Only remotes without head and no local branch
+        !is_stale(branch.tip_time, now, 14)
+    }
+
+    pub fn empty() -> Self {
+        Self {
+            rows: Vec::new(),
+            edges: Vec::new(),
+        }
+    }
+
     pub fn load(source: &impl CommitSource) -> Self {
         let now = Pane::stamp_now();
         let commits = source.commits();
