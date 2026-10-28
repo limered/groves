@@ -123,36 +123,16 @@ impl Pane {
         }
     }
 
-    pub fn load(source: &impl CommitSource) -> Self {
-        let now = Pane::stamp_now();
-        let commits = source.commits();
-        let mut commit_index: HashMap<String, usize> = Pane::build_commit_index(&commits);
+    fn filter_commits(refs: &[GitRef], commits: Vec<Commit>) -> Vec<Commit> {
+        let now = Self::stamp_now();
+        let commit_index: HashMap<String, usize> = Pane::build_commit_index(&commits);
 
-        let mut rows: Vec<Row> = Vec::new();
-        let mut edges = Vec::new();
-
-        let Some(head_ref) = source
-            .ref_snapshot()
-            .refs()
+        let mut not_stale_ref_ids: HashSet<String> = refs
             .iter()
-            .filter(|r| r.name == "HEAD")
-            .next()
-        else {
-            return Pane::empty();
-        };
-
-        let all_refs = source.ref_snapshot().refs();
-        let refs_without_stale_remotes: Vec<&GitRef> = all_refs
-            .iter()
-            .filter(|r| Pane::should_keep(&r, &all_refs, now))
-            .collect();
-
-        let mut not_stale_ref_ids: HashSet<String> = refs_without_stale_remotes
-            .iter()
+            .filter(|r| Pane::should_keep(&r, refs, now))
             .map(|r| r.target.clone())
             .collect();
 
-        // add only children of the tips into collection
         let mut work_queue: Vec<usize> = not_stale_ref_ids
             .iter()
             .map(|id| commit_index.get(id).unwrap().clone())
@@ -168,21 +148,39 @@ impl Pane {
             }
         }
 
-        let filtered_commits: Vec<Commit> = commits
+        commits
             .into_iter()
             .filter(|c| not_stale_ref_ids.contains(&c.id))
-            .collect();
+            .collect()
+    }
+
+    pub fn load(source: &impl CommitSource) -> Self {
+        let commits = source.commits();
+        let mut rows: Vec<Row> = Vec::new();
+        let mut edges = Vec::new();
+
+        let Some(head_ref) = source
+            .ref_snapshot()
+            .refs()
+            .iter()
+            .filter(|r| r.name == "HEAD")
+            .next()
+        else {
+            return Pane::empty();
+        };
+
+        let all_refs = source.ref_snapshot().refs();
+        let filtered_commits = Self::filter_commits(&all_refs, commits);
+        let filtered_commit_index = Pane::build_commit_index(&filtered_commits);
 
         let mut placed: Vec<bool> = vec![false; filtered_commits.len()];
         let mut lanes: Vec<usize> = vec![0; filtered_commits.len()];
         let mut row_ids: Vec<usize> = Vec::new();
         let mut child_count: Vec<usize> = vec![0; filtered_commits.len()];
-        commit_index = Pane::build_commit_index(&filtered_commits);
 
-        // collect children per commit
         for c in &filtered_commits {
             for p in &c.parents {
-                let Some(p_id) = commit_index.get(p) else {
+                let Some(p_id) = filtered_commit_index.get(p) else {
                     continue;
                 };
                 child_count[*p_id] += 1;
@@ -201,7 +199,7 @@ impl Pane {
             };
             row_ids.push(c);
             for p in filtered_commits[c].parents.clone() {
-                let Some(p_id) = commit_index.get(&p) else {
+                let Some(p_id) = filtered_commit_index.get(&p) else {
                     continue;
                 };
                 child_count[*p_id] -= 1;
@@ -212,7 +210,7 @@ impl Pane {
         }
 
         // lanes
-        let head_index = match commit_index.get(&head_ref.target) {
+        let head_index = match filtered_commit_index.get(&head_ref.target) {
             Some(i) => *i,
             None => 0,
         };
@@ -233,7 +231,7 @@ impl Pane {
                 lanes[*id] = free_lane;
                 placed[*id] = true;
                 for p in &filtered_commits[*id].parents {
-                    let Some(p_id) = commit_index.get(p) else {
+                    let Some(p_id) = filtered_commit_index.get(p) else {
                         continue;
                     };
                     if reserved_lanes.contains(&(*p_id as i32)) {
@@ -257,14 +255,14 @@ impl Pane {
                 continue;
             }
             // replace deleted position with first parent
-            let Some(p_id) = commit_index.get(&parents[0]) else {
+            let Some(p_id) = filtered_commit_index.get(&parents[0]) else {
                 continue;
             };
             reserved_lanes[*smallest_id] = *p_id as i32;
 
             // add other parents on free slots (merge)
             for parent in parents.iter().skip(1) {
-                let Some(p_id) = commit_index.get(parent) else {
+                let Some(p_id) = filtered_commit_index.get(parent) else {
                     continue;
                 };
                 if reserved_lanes.contains(&(*p_id as i32)) {
@@ -286,7 +284,7 @@ impl Pane {
                     is_merge: c.parents.len() > 1,
                 });
                 for parent in &c.parents {
-                    let Some(p_index) = commit_index.get(parent) else {
+                    let Some(p_index) = filtered_commit_index.get(parent) else {
                         continue;
                     };
                     let Some(p_row) = row_ids.iter().position(|i| i.eq(p_index)) else {
