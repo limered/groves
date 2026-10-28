@@ -52,7 +52,7 @@ fn upstream_name(worktree_repo: &gix::Repository) -> Result<Option<String>, Repo
 
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
     let repo = gix::open(path).map_err(RepoError::NotARepository)?;
-    let refs: Vec<GitRef> = Vec::new();
+    let _refs: Vec<GitRef> = Vec::new();
     let head = repo.head_commit().map_err(RepoError::NoHead)?;
 
     let mut wkt_heads: Vec<GitRef> = Vec::new();
