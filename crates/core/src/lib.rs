@@ -11,7 +11,7 @@ pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
     now - tip_time > stale_after_days * DAY_SECONDS
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct Commit {
     pub id: String,
     pub parents: Vec<String>,
@@ -81,7 +81,6 @@ impl Pane {
             edges: Vec::new(),
         }
     }
-    
 
     pub fn rows(&self) -> &[Row] {
         &self.rows
