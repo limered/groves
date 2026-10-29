@@ -1,6 +1,6 @@
 // Emil owns this file — ticket 01 will add `open(path)` plus the `CommitSource` impl here.
 use groves_core::{Commit, CommitSource, GitRef, RefKind, RefSnapshot};
-use std::{collections::HashMap, path::Path};
+use std::path::Path;
 use thiserror::Error;
 
 #[derive(Default)]
@@ -56,8 +56,8 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
     let head = repo.head_commit().map_err(RepoError::NoHead)?;
 
     let mut wkt_heads: Vec<GitRef> = Vec::new();
-    let mut ref_commits: HashMap<String, gix::ObjectId> = HashMap::new();
-    ref_commits.insert("HEAD".to_string(), head.id);
+    let mut ref_commits: Vec<gix::ObjectId> = Vec::new();
+    ref_commits.push(head.id);
 
     let worktrees = repo.worktrees_including_main().map_err(RepoError::Refs)?;
     for worktree in worktrees {
@@ -78,11 +78,22 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
             tip_time: time,
             upstream: wkt_upstream,
         });
-        ref_commits.insert(name, wkt_head_commit.id);
+        ref_commits.push(wkt_head_commit.id);
     }
-    println!("{:?}", wkt_heads);
 
-    let walk_platform = repo.rev_walk([head.id]);
+    let all_refs = repo.references().map_err(RepoError::Refs)?;
+    for one_ref in all_refs.all().map_err(RepoError::Refs)? {
+        let r = one_ref.map_err(RepoError::Refs)?;
+        let name = r.name();
+        let target = r.clone().peel_to_commit().map_err(RepoError::Refs)?;
+        let time = target.time().map_err(RepoError::Refs)?.seconds;
+        let upstream_ref = repo
+            .branch_remote_tracking_ref_name(&name, gix::remote::Direction::Fetch)
+            .transpose()
+            .map_err(RepoError::NoUpstream)?;
+    }
+
+    let walk_platform = repo.rev_walk(ref_commits);
     let configured_walk = walk_platform.sorting(gix::revision::walk::Sorting::ByCommitTime(
         gix::traverse::commit::simple::CommitTimeOrder::NewestFirst,
     ));
@@ -108,8 +119,11 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         });
     }
 
+    // println!("{:?}", commits);
+    println!("{:?}", wkt_heads);
+
     Ok(Repo {
         commits,
-        ref_snapshot: RefSnapshot::new(Vec::new()),
+        ref_snapshot: RefSnapshot::new(wkt_heads),
     })
 }
