@@ -105,15 +105,13 @@ impl Pane {
         let Some(head_ref) = source
             .ref_snapshot()
             .refs()
-            .iter()
-            .filter(|r| r.name == "HEAD")
-            .next()
+            .iter().find(|r| r.name == "HEAD")
         else {
             return Pane::empty();
         };
 
         let all_refs = source.ref_snapshot().refs();
-        let filtered_commits = Self::filter_commits(&all_refs, commits);
+        let filtered_commits = Self::filter_commits(all_refs, commits);
         let filtered_commit_index = Pane::build_commit_index(&filtered_commits);
 
         let row_ids = Self::calculate_row_ids(&filtered_commits, &filtered_commit_index);
@@ -200,7 +198,7 @@ impl Pane {
             };
             lanes[*id] = *smallest_id;
             placed[*id] = true;
-            // rmove all expected (split)
+            // move all expected (split)
             for id in &expected_ids {
                 reserved_lanes[*id] = None;
             }
@@ -283,7 +281,7 @@ impl Pane {
             .as_secs() as i64
     }
 
-    fn build_commit_index(commits: &Vec<Commit>) -> HashMap<String, usize> {
+    fn build_commit_index(commits: &[Commit]) -> HashMap<String, usize> {
         commits
             .iter()
             .enumerate()
@@ -323,16 +321,15 @@ impl Pane {
 
         let mut not_stale_ref_ids: HashSet<String> = refs
             .iter()
-            .filter(|r| Pane::should_keep(&r, refs, now))
+            .filter(|r| Pane::should_keep(r, refs, now))
             .map(|r| r.target.clone())
             .collect();
 
         let mut work_queue: Vec<usize> = not_stale_ref_ids
             .iter()
-            .map(|id| commit_index.get(id).unwrap().clone())
+            .map(|id| *commit_index.get(id).unwrap())
             .collect();
-        while !work_queue.is_empty() {
-            let c_id = work_queue.pop().unwrap();
+        while let Some(c_id) = work_queue.pop() {
             let parents = commits[c_id].parents.clone();
             for p in &parents {
                 let p_id = commit_index.get(p).unwrap();
