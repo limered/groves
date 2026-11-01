@@ -158,7 +158,7 @@ impl Pane {
 
     fn calculate_lane_ids(
         head_ref: &&GitRef,
-        filtered_commits: &Vec<Commit>,
+        filtered_commits: &[Commit],
         filtered_commit_index: &HashMap<String, usize>,
         row_ids: &Vec<usize>,
     ) -> (Vec<bool>, Vec<usize>) {
@@ -168,17 +168,17 @@ impl Pane {
         };
         let mut placed: Vec<bool> = vec![false; filtered_commits.len()];
         let mut lanes: Vec<usize> = vec![0; filtered_commits.len()];
-        let mut reserved_lanes: Vec<i32> = Vec::new();
-        reserved_lanes.push(head_index as i32);
+        let mut reserved_lanes: Vec<Option<usize>> = Vec::new();
+        reserved_lanes.push(Some(head_index));
         for id in row_ids {
             let mut expected_ids: Vec<usize> = Vec::new();
             for (i, index) in reserved_lanes.iter().enumerate() {
-                if index.eq(&((*id) as i32)) {
+                if index.eq(&Some(*id)) {
                     expected_ids.push(i);
                 }
             }
             if expected_ids.is_empty() {
-                let free_lane = match reserved_lanes.iter().position(|i| *i == -1) {
+                let free_lane = match reserved_lanes.iter().position(|i| i.is_none()) {
                     None => reserved_lanes.len(),
                     Some(i) => i,
                 };
@@ -188,7 +188,7 @@ impl Pane {
                     let Some(p_id) = filtered_commit_index.get(p) else {
                         continue;
                     };
-                    if reserved_lanes.contains(&(*p_id as i32)) {
+                    if reserved_lanes.contains(&Some(*p_id)) {
                         continue;
                     }
                     Self::insert_at_free_position(&mut reserved_lanes, p_id);
@@ -202,7 +202,7 @@ impl Pane {
             placed[*id] = true;
             // rmove all expected (split)
             for id in &expected_ids {
-                reserved_lanes[*id] = -1;
+                reserved_lanes[*id] = None;
             }
             let parents = &filtered_commits[*id].parents;
             if parents.is_empty() {
@@ -212,14 +212,14 @@ impl Pane {
             let Some(p_id) = filtered_commit_index.get(&parents[0]) else {
                 continue;
             };
-            reserved_lanes[*smallest_id] = *p_id as i32;
+            reserved_lanes[*smallest_id] = Some(*p_id);
 
             // add other parents on free slots (merge)
             for parent in parents.iter().skip(1) {
                 let Some(p_id) = filtered_commit_index.get(parent) else {
                     continue;
                 };
-                if reserved_lanes.contains(&(*p_id as i32)) {
+                if reserved_lanes.contains(&Some(*p_id)) {
                     continue;
                 }
                 Self::insert_at_free_position(&mut reserved_lanes, p_id);
@@ -267,11 +267,11 @@ impl Pane {
         row_ids
     }
 
-    fn insert_at_free_position(reserved_lanes: &mut Vec<i32>, p_id: &usize) {
-        match reserved_lanes.iter().position(|i| *i == -1) {
-            None => reserved_lanes.push(*p_id as i32),
+    fn insert_at_free_position(reserved_lanes: &mut Vec<Option<usize>>, p_id: &usize) {
+        match reserved_lanes.iter().position(|i| i.is_none()) {
+            None => reserved_lanes.push(Some(*p_id)),
             Some(i) => {
-                reserved_lanes[i] = *p_id as i32;
+                reserved_lanes[i] = Some(*p_id);
             }
         }
     }
