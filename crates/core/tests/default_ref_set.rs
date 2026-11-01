@@ -4,7 +4,7 @@
 
 use groves_core::{GitRef, Pane, RefKind};
 use groves_testkit::{GraphCommit, SyntheticSource};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 const DAY: i64 = 24 * 60 * 60;
@@ -35,6 +35,13 @@ fn git_ref(
 
 fn visible_ids(pane: &Pane) -> HashSet<&str> {
     pane.rows().iter().map(|row| row.id.as_str()).collect()
+}
+
+fn lanes_by_id(pane: &Pane) -> HashMap<String, usize> {
+    pane.rows()
+        .iter()
+        .map(|row| (row.id.clone(), row.lane))
+        .collect()
 }
 
 fn commit(id: &str, parents: &[&str], time: i64) -> GraphCommit {
@@ -217,5 +224,56 @@ fn a_merged_stale_branchs_line_is_still_drawn() {
         pane.lane_count(),
         2,
         "the merged line hangs off the merge's side lane; it must not widen the graph"
+    );
+}
+
+#[test]
+fn two_merges_of_one_spur_keep_the_shared_chain_in_the_head_lane() {
+    // LD41's real shape: master and develop each merge the single-commit
+    // release spur `rel`; master's first parent sits deep in the very line
+    // the spur branched from. One physical chain below the fork — the user
+    // follows it straight down HEAD's lane — while the release spur and the
+    // develop tip get their own lines beside it (three lanes, as git draws).
+    let source = SyntheticSource::for_graph_with_refs(
+        vec![
+            commit("m2", &["s", "rel"], 40), // 66e17c4: master/HEAD merge
+            commit("d1", &["c1", "rel"], 39), // 0b0ec49: develop merge tip
+            commit("rel", &["c1"], 38), // ad72308: the release spur
+            commit("c1", &["s"], 37), // 350424a: top of the shared chain
+            commit("s", &["root"], 30), // d954693: deep shared history
+            commit("root", &[], 10),
+        ],
+        vec![
+            git_ref("HEAD", "m2", RefKind::WorktreeHead, 40, None),
+            git_ref("master", "m2", RefKind::Local, 40, Some("origin/master")),
+            git_ref("develop", "d1", RefKind::Local, 39, None),
+        ],
+    );
+
+    let pane = Pane::load(&source);
+    let lanes = lanes_by_id(&pane);
+
+    assert_eq!(pane.lane_count(), 3, "three lines: HEAD chain, spur, develop tip");
+    assert_eq!(lanes["m2"], 0, "HEAD's merge owns lane 0");
+    assert_eq!(lanes["rel"], 1, "the release spur sits beside HEAD's lane");
+    assert_eq!(lanes["d1"], 2, "the develop tip runs its own line");
+    // The chain below the fork is one line that master's chain flows
+    // through — it may not split lanes somewhere deep down.
+    assert_eq!(lanes["c1"], 0, "the shared chain stays in HEAD's lane");
+    assert_eq!(lanes["s"], 0, "the deep shared history is the same line");
+    assert_eq!(lanes["root"], 0);
+
+    // Both of the develop merge's parents must be visibly connected.
+    let mut targets: Vec<(usize, usize)> = pane
+        .edges()
+        .iter()
+        .filter(|e| e.child_row == 1)
+        .map(|e| (e.parent_row, e.parent_lane))
+        .collect();
+    targets.sort();
+    assert_eq!(
+        targets,
+        vec![(2, lanes["rel"]), (3, lanes["c1"])],
+        "the develop merge connects to both the chain and the spur"
     );
 }

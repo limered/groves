@@ -296,6 +296,18 @@ pub fn init_branch_fixture_repo() -> PathBuf {
 pub fn init_ref_fixture_repo() -> PathBuf {
     let dir = fresh_dir("ref-fixture");
     git(&dir, &["init", "-q", "-b", "main"]);
+    // The remote must exist in config so `branch.main.remote = origin`
+    // resolves: gix maps branch.main.merge through the remote's fetch
+    // refspecs to find the tracking ref.
+    git(
+        &dir,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://example.invalid/groves.git",
+        ],
+    );
 
     std::fs::write(dir.join("root.txt"), "root\n").expect("write root file");
     git(&dir, &["add", "."]);

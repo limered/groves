@@ -111,7 +111,7 @@ impl Graph {
             if i > 0 {
                 for &(src, slot) in &pending {
                     let dst = if active[slot as usize] == Some(me) { l as u16 } else { slot };
-                    edges.push(Edge { src, dst, color: lane_color[slot as usize] });
+                    edges.push(Edge alloc{ src, dst, color: lane_color[slot as usize] });
                 }
                 edge_off.push(edges.len() as u32);
             }
