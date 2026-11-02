@@ -2,6 +2,14 @@
 
 User-facing changes per release. Each section is written by the `release` skill and also serves as the text of the GitHub Release.
 
+## [0.3.0] - 2026-11-02
+
+### Added
+- Panes draw only history reachable from the default ref set — local branches, their upstreams, `origin/HEAD`, every worktree head and remote branches updated in the last 14 days. Stale remote branches, tags and history only they reach no longer bury the graph on large repositories.
+
+### Fixed
+- Repositories managed by GitKraken no longer fail to open: refs that don't peel to a commit are skipped.
+
 ## [0.2.0] - 2026-10-26
 
 ### Added
