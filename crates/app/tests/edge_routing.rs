@@ -39,9 +39,11 @@ fn a_vertical_edge_is_one_straight_run() {
 fn first_parent_edge_keeps_lane_through_intermediate_gaps() {
     // The develop line's fix: ride the child's own lane past every
     // intermediate commit row, bend into the parent's lane only across the
-    // final gap. Three rows down means two straight gaps, one bend.
+    // final gap. Corners, not cells: the ride collapses to one pair, the
+    // bend keeps a one-gap pair so the curve can't thread through the
+    // middle rows.
     let route = route_edge(&edge(0, 0, 3, 2, true));
-    assert_eq!(route, vec![(0, 0), (1, 0), (2, 0), (3, 2)]);
+    assert_eq!(route, vec![(0, 0), (2, 0), (3, 2)]);
 }
 
 #[test]
@@ -49,14 +51,8 @@ fn one_row_gap_edges_keep_their_single_bend() {
     // A bend across the only gap it has — today's look, first or later
     // parent. This is the shape the develop tip's merge curve keeps (it must
     // still bend right below the tip).
-    assert_eq!(
-        route_edge(&edge(0, 0, 1, 2, true)),
-        vec![(0, 0), (1, 2)]
-    );
-    assert_eq!(
-        route_edge(&edge(0, 2, 1, 1, false)),
-        vec![(0, 2), (1, 1)]
-    );
+    assert_eq!(route_edge(&edge(0, 0, 1, 2, true)), vec![(0, 0), (1, 2)]);
+    assert_eq!(route_edge(&edge(0, 2, 1, 1, false)), vec![(0, 2), (1, 1)]);
 }
 
 #[test]
@@ -127,13 +123,30 @@ fn the_two_merges_pane_routes_every_edge_per_row_gap() {
             },
         ],
         vec![
-            // The default ref set only needs HEAD here: every commit in the
-            // shape is reachable from m2 (rel and c1 through the merges).
+            // Mirror ticket 03's fixture: HEAD, master, develop. Without
+            // `develop` the default-ref-set filter correctly drops d1 —
+            // nothing else reaches the develop tip — and this shape stops
+            // being LD41's top region. The filter isn't broken; my first
+            // copy of this fixture was.
             GitRef {
                 name: "HEAD".into(),
                 target: "m2".into(),
                 kind: RefKind::WorktreeHead,
                 tip_time: 40,
+                upstream: None,
+            },
+            GitRef {
+                name: "master".into(),
+                target: "m2".into(),
+                kind: RefKind::Local,
+                tip_time: 40,
+                upstream: None,
+            },
+            GitRef {
+                name: "develop".into(),
+                target: "d1".into(),
+                kind: RefKind::Local,
+                tip_time: 39,
                 upstream: None,
             },
         ],

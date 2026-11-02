@@ -65,7 +65,6 @@ pub struct Edge {
     pub parent_row: usize,
     pub child_lane: usize,
     pub parent_lane: usize,
-    // pub is_merge: bool,
     pub is_first_parent: bool,
 }
 
@@ -124,7 +123,7 @@ impl Pane {
             &row_ids,
         );
 
-        for (i, index) in row_ids.iter().enumerate() {
+        for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
                 let c = &filtered_commits[*index];
                 rows.push(Row {
@@ -134,20 +133,22 @@ impl Pane {
                     lane: lanes[*index],
                     is_merge: c.parents.len() > 1,
                 });
-                for parent in &c.parents {
+                for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {
                         continue;
                     };
-                    let Some(p_row) = row_ids.iter().position(|i| i.eq(p_index)) else {
+                    let Some(parent_row) = row_ids
+                        .iter()
+                        .position(|inner_row_index| inner_row_index.eq(p_index))
+                    else {
                         continue;
                     };
                     let edge = Edge {
                         child_lane: lanes[*index],
-                        child_row: i,
+                        child_row,
                         parent_lane: lanes[*p_index],
-                        parent_row: p_row,
-                        // is_merge: c.parents.len() > 1,
-                        is_first_parent: false,
+                        parent_row,
+                        is_first_parent: parent_index == 0,
                     };
                     edges.push(edge);
                 }

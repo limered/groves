@@ -58,11 +58,28 @@ fn two_merge_shape() -> Pane {
             },
         ],
         vec![
+            // Mirror ticket 03's fixture refs. `develop` is load-bearing:
+            // nothing else reaches d1, so without it the filter drops d1 and
+            // this isn't the two-merges shape.
             GitRef {
                 name: "HEAD".into(),
                 target: "m2".into(),
                 kind: RefKind::WorktreeHead,
                 tip_time: 40,
+                upstream: None,
+            },
+            GitRef {
+                name: "master".into(),
+                target: "m2".into(),
+                kind: RefKind::Local,
+                tip_time: 40,
+                upstream: None,
+            },
+            GitRef {
+                name: "develop".into(),
+                target: "d1".into(),
+                kind: RefKind::Local,
+                tip_time: 39,
                 upstream: None,
             },
         ],
@@ -82,7 +99,10 @@ fn first_parent_edges_flagged_where_the_line_continues() {
     let pane = two_merge_shape();
 
     // m2's parents are `[s, rel]`: the trunk line continues into s…
-    assert!(edge_of(&pane, 0, 4).is_first_parent, "m2→s is m2's first parent");
+    assert!(
+        edge_of(&pane, 0, 4).is_first_parent,
+        "m2→s is m2's first parent"
+    );
     // …and the release spur departs as a later claim.
     assert!(
         !edge_of(&pane, 0, 2).is_first_parent,
@@ -95,7 +115,10 @@ fn first_parent_edges_flagged_where_the_line_continues() {
         edge_of(&pane, 1, 3).is_first_parent,
         "d1→c1 is d1's first parent even though d1 is a merge"
     );
-    assert!(!edge_of(&pane, 1, 2).is_first_parent, "d1→rel is a later claim");
+    assert!(
+        !edge_of(&pane, 1, 2).is_first_parent,
+        "d1→rel is a later claim"
+    );
 
     // Single-parent children always continue their line.
     assert!(edge_of(&pane, 2, 3).is_first_parent, "rel→c1");
