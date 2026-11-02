@@ -228,12 +228,11 @@ fn a_merged_stale_branchs_line_is_still_drawn() {
 }
 
 #[test]
-fn two_merges_of_one_spur_keep_the_shared_chain_in_the_head_lane() {
-    // LD41's real shape: master and develop each merge the single-commit
-    // release spur `rel`; master's first parent sits deep in the very line
-    // the spur branched from. One physical chain below the fork — the user
-    // follows it straight down HEAD's lane — while the release spur and the
-    // develop tip get their own lines beside it (three lanes, as git draws).
+fn two_merges_of_one_spur_follow_gits_own_columns() {
+    // LD41's real shape, pinned to what `git log --graph` itself renders
+    // (verified per-row): the shared chain rides the release spur's lane and
+    // bends back into HEAD's lane only where the lines physically merge —
+    // the develop tip gets the outermost line. Three lanes total.
     let source = SyntheticSource::for_graph_with_refs(
         vec![
             commit("m2", &["s", "rel"], 40), // 66e17c4: master/HEAD merge
@@ -257,10 +256,11 @@ fn two_merges_of_one_spur_keep_the_shared_chain_in_the_head_lane() {
     assert_eq!(lanes["m2"], 0, "HEAD's merge owns lane 0");
     assert_eq!(lanes["rel"], 1, "the release spur sits beside HEAD's lane");
     assert_eq!(lanes["d1"], 2, "the develop tip runs its own line");
-    // The chain below the fork is one line that master's chain flows
-    // through — it may not split lanes somewhere deep down.
-    assert_eq!(lanes["c1"], 0, "the shared chain stays in HEAD's lane");
-    assert_eq!(lanes["s"], 0, "the deep shared history is the same line");
+    // git renders the shared chain on the line that reached it first (the
+    // release spur's) and bends back into lane 0 only where the lines
+    // physically join at s.
+    assert_eq!(lanes["c1"], 1, "the chain rides the line that claimed it first");
+    assert_eq!(lanes["s"], 0, "the trunk resumes lane 0 at the join");
     assert_eq!(lanes["root"], 0);
 
     // Both of the develop merge's parents must be visibly connected.
