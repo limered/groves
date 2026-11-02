@@ -56,7 +56,7 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
 
     let mut walk_refs: Vec<GitRef> = Vec::new();
     let mut ref_commits: Vec<gix::ObjectId> = Vec::new();
-    
+
     let worktrees = repo.worktrees_including_main().map_err(RepoError::Refs)?;
     for worktree in worktrees {
         let wkt = worktree.map_err(RepoError::Refs)?;
@@ -104,7 +104,9 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
             .map_err(RepoError::NoUpstream)?
             .map(|n| n.shorten().to_string());
 
-        let (category, short_name) = name.category_and_short_name().unwrap();
+        let Some((category, short_name)) = name.category_and_short_name() else {
+            continue;
+        };
 
         walk_refs.push(GitRef {
             name: short_name.to_string(),

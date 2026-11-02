@@ -21,4 +21,4 @@
 ## Manual checks
 
 - [ ] `cargo run -p groves-app -- <Factory-repo>` opens the repo and lays out only the default ref set; the graph has noticeably fewer lanes than in issue 02.
-- [ ] Confirm a recent remote branch appears, while a remote branch older than 14 days and a tag-only history do not add rows or lanes.
+- [x] Confirm a recent remote branch appears, while a remote branch older than 14 days and a tag-only history do not add rows or lanes.
