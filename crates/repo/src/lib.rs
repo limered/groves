@@ -96,7 +96,9 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
             Some(remote_name) => remote_name.as_bstr().to_string(),
             None => "".to_string(),
         };
-        let target = r.clone().peel_to_commit().map_err(RepoError::Refs)?;
+        let Some(target) = r.clone().peel_to_commit().ok() else {
+            continue;
+        };
         let time = target.time().map_err(RepoError::Refs)?.seconds;
         let upstream_ref = repo
             .branch_remote_tracking_ref_name(name, gix::remote::Direction::Fetch)
