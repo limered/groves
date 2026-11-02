@@ -235,11 +235,11 @@ fn two_merges_of_one_spur_follow_gits_own_columns() {
     // the develop tip gets the outermost line. Three lanes total.
     let source = SyntheticSource::for_graph_with_refs(
         vec![
-            commit("m2", &["s", "rel"], 40), // 66e17c4: master/HEAD merge
+            commit("m2", &["s", "rel"], 40),  // 66e17c4: master/HEAD merge
             commit("d1", &["c1", "rel"], 39), // 0b0ec49: develop merge tip
-            commit("rel", &["c1"], 38), // ad72308: the release spur
-            commit("c1", &["s"], 37), // 350424a: top of the shared chain
-            commit("s", &["root"], 30), // d954693: deep shared history
+            commit("rel", &["c1"], 38),       // ad72308: the release spur
+            commit("c1", &["s"], 37),         // 350424a: top of the shared chain
+            commit("s", &["root"], 30),       // d954693: deep shared history
             commit("root", &[], 10),
         ],
         vec![
@@ -252,14 +252,21 @@ fn two_merges_of_one_spur_follow_gits_own_columns() {
     let pane = Pane::load(&source);
     let lanes = lanes_by_id(&pane);
 
-    assert_eq!(pane.lane_count(), 3, "three lines: HEAD chain, spur, develop tip");
+    assert_eq!(
+        pane.lane_count(),
+        3,
+        "three lines: HEAD chain, spur, develop tip"
+    );
     assert_eq!(lanes["m2"], 0, "HEAD's merge owns lane 0");
     assert_eq!(lanes["rel"], 1, "the release spur sits beside HEAD's lane");
     assert_eq!(lanes["d1"], 2, "the develop tip runs its own line");
     // git renders the shared chain on the line that reached it first (the
     // release spur's) and bends back into lane 0 only where the lines
     // physically join at s.
-    assert_eq!(lanes["c1"], 1, "the chain rides the line that claimed it first");
+    assert_eq!(
+        lanes["c1"], 1,
+        "the chain rides the line that claimed it first"
+    );
     assert_eq!(lanes["s"], 0, "the trunk resumes lane 0 at the join");
     assert_eq!(lanes["root"], 0);
 

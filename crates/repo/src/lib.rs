@@ -1,7 +1,7 @@
 // Emil owns this file — ticket 01 will add `open(path)` plus the `CommitSource` impl here.
-use gix::refs::Category;
+use gix::Repository;
+use gix::refs::{Category, FullNameRef};
 use gix::remote::Direction;
-use groves_core::RefKind::WorktreeHead;
 use groves_core::{Commit, CommitSource, GitRef, RefKind, RefSnapshot};
 use std::path::Path;
 use thiserror::Error;
@@ -24,8 +24,6 @@ impl CommitSource for Repo {
 pub enum RepoError {
     #[error("can't open repo: {0}")]
     NotARepository(#[source] gix::Error),
-    #[error("repository has no head")]
-    NoHead(#[source] gix::Error),
     #[error("couldn't get refs in repo, error: {0}")]
     Refs(#[source] gix::Error),
     #[error("error retrieving commit info")]
@@ -38,51 +36,38 @@ pub enum RepoError {
     NoCommitMessage(#[source] gix::Error),
     #[error("ref has no upstream {0}")]
     NoUpstream(#[source] gix::Error),
-}
-
-fn map_category_to_ref_kind(category: Category, remote: String) -> RefKind {
-    match category {
-        Category::LocalBranch => RefKind::Local,
-        Category::PseudoRef => RefKind::WorktreeHead,
-        Category::RemoteBranch => RefKind::Remote { remote },
-        Category::Tag => RefKind::Tag,
-        _ => RefKind::WorktreeHead,
-    }
+    #[error("error reading worktrees {0}")]
+    WorktreesMissing(#[source] gix::Error),
 }
 
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
     let repo = gix::open(path).map_err(RepoError::NotARepository)?;
-    let _refs: Vec<GitRef> = Vec::new();
-
     let mut walk_refs: Vec<GitRef> = Vec::new();
     let mut ref_commits: Vec<gix::ObjectId> = Vec::new();
 
-    let worktrees = repo.worktrees_including_main().map_err(RepoError::Refs)?;
+    let worktrees = repo
+        .worktrees_including_main()
+        .map_err(RepoError::WorktreesMissing)?;
     for worktree in worktrees {
-        let wkt = worktree.map_err(RepoError::Refs)?;
-        let mut head = wkt.head().map_err(RepoError::NoHead)?;
-        let target = head.peel_to_commit().map_err(RepoError::Refs)?;
+        let Ok(wkt) = worktree else {
+            continue;
+        };
+        let Ok(mut head) = wkt.head() else { continue };
+        let Ok(target) = head.peel_to_commit() else {
+            continue;
+        };
         let Some(wkt_ref_name) = head.referent_name() else {
             continue;
         };
-        let time = target.time().map_err(RepoError::Refs)?.seconds;
+        let Ok(time) = target.time() else { continue };
 
-        let upstream_ref = repo
-            .branch_remote_tracking_ref_name(wkt_ref_name, gix::remote::Direction::Fetch)
-            .transpose()
-            .map_err(RepoError::NoUpstream)?
-            .map(|n| n.shorten().to_string());
-
-        let remote = match wkt.remote_default_name(Direction::Fetch) {
-            Some(remote_name) => remote_name.to_string(),
-            None => "".to_string(),
-        };
+        let upstream_ref = resolve_upstream_ref(&repo, wkt_ref_name);
 
         walk_refs.push(GitRef {
             name: "HEAD".to_string(),
             target: target.id.to_string(),
-            kind: WorktreeHead,
-            tip_time: time,
+            kind: RefKind::WorktreeHead,
+            tip_time: time.seconds,
             upstream: upstream_ref,
         });
         ref_commits.push(target.id);
@@ -90,31 +75,31 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
 
     let all_refs = repo.references().map_err(RepoError::Refs)?;
     for one_ref in all_refs.all().map_err(RepoError::Refs)? {
-        let r = one_ref.map_err(RepoError::Refs)?;
-        let name = r.name();
-        let remote_name = match r.remote_name(Direction::Fetch) {
+        let Ok(me) = one_ref else { continue };
+        let name = me.name();
+        let remote_name = match me.remote_name(Direction::Fetch) {
             Some(remote_name) => remote_name.as_bstr().to_string(),
             None => "".to_string(),
         };
-        let Some(target) = r.clone().peel_to_commit().ok() else {
+        let Some(target) = me.clone().peel_to_commit().ok() else {
             continue;
         };
-        let time = target.time().map_err(RepoError::Refs)?.seconds;
-        let upstream_ref = repo
-            .branch_remote_tracking_ref_name(name, gix::remote::Direction::Fetch)
-            .transpose()
-            .map_err(RepoError::NoUpstream)?
-            .map(|n| n.shorten().to_string());
+        let Ok(time) = target.time() else { continue };
+        let upstream_ref = resolve_upstream_ref(&repo, name);
 
         let Some((category, short_name)) = name.category_and_short_name() else {
+            continue;
+        };
+
+        let Some(kind) = map_category_to_ref_kind(category, remote_name) else {
             continue;
         };
 
         walk_refs.push(GitRef {
             name: short_name.to_string(),
             target: target.id.to_string(),
-            tip_time: time,
-            kind: map_category_to_ref_kind(category, remote_name),
+            tip_time: time.seconds,
+            kind,
             upstream: upstream_ref,
         });
         ref_commits.push(target.id);
@@ -150,4 +135,22 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         commits,
         ref_snapshot: RefSnapshot::new(walk_refs),
     })
+}
+
+fn resolve_upstream_ref(repo: &Repository, name: &FullNameRef) -> Option<String> {
+    repo.branch_remote_tracking_ref_name(name, Direction::Fetch)
+        .transpose()
+        .ok()
+        .flatten()
+        .map(|n| n.shorten().to_string())
+}
+
+fn map_category_to_ref_kind(category: Category, remote: String) -> Option<RefKind> {
+    match category {
+        Category::LocalBranch => Some(RefKind::Local),
+        Category::PseudoRef => Some(RefKind::WorktreeHead),
+        Category::RemoteBranch => Some(RefKind::Remote { remote }),
+        Category::Tag => Some(RefKind::Tag),
+        _ => None,
+    }
 }

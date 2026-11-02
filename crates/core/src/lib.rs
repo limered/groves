@@ -105,7 +105,8 @@ impl Pane {
         let Some(head_ref) = source
             .ref_snapshot()
             .refs()
-            .iter().find(|r| r.name == "HEAD")
+            .iter()
+            .find(|r| r.name == "HEAD")
         else {
             return Pane::empty();
         };
