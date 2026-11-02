@@ -97,23 +97,23 @@ impl eframe::App for GrovesApp {
                                         Pos2::new(end_x, end_y),
                                     ];
                                     if end_y - start_y > 1.1 * ROW_HEIGHT_PX {
-                                        if edge.is_merge {
-                                            let helper_y =
-                                                calc_y(top, range_start, edge.child_row + 1);
-                                            painter.line_segment(
-                                                [
-                                                    Pos2::new(end_x, helper_y),
-                                                    Pos2::new(end_x, end_y),
-                                                ],
-                                                st,
-                                            );
-                                            pts = [
-                                                Pos2::new(start_x, start_y),
-                                                Pos2::new(start_x, start_y + row_height * 0.55),
-                                                Pos2::new(end_x, helper_y - row_height * 0.55),
-                                                Pos2::new(end_x, helper_y),
-                                            ];
-                                        } else {
+                                        // if edge.is_merge {
+                                        //     let helper_y =
+                                        //         calc_y(top, range_start, edge.child_row + 1);
+                                        //     painter.line_segment(
+                                        //         [
+                                        //             Pos2::new(end_x, helper_y),
+                                        //             Pos2::new(end_x, end_y),
+                                        //         ],
+                                        //         st,
+                                        //     );
+                                        //     pts = [
+                                        //         Pos2::new(start_x, start_y),
+                                        //         Pos2::new(start_x, start_y + row_height * 0.55),
+                                        //         Pos2::new(end_x, helper_y - row_height * 0.55),
+                                        //         Pos2::new(end_x, helper_y),
+                                        //     ];
+                                        // } else {
                                             let helper_y =
                                                 calc_y(top, range_start, edge.parent_row - 1);
                                             painter.line_segment(
@@ -129,7 +129,7 @@ impl eframe::App for GrovesApp {
                                                 Pos2::new(end_x, end_y - row_height * 0.55),
                                                 Pos2::new(end_x, end_y),
                                             ];
-                                        }
+                                        // }
                                     }
                                     painter.add(
                                         egui::epaint::CubicBezierShape::from_points_stroke(
