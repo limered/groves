@@ -4,14 +4,18 @@
 //! Ticket 02 additions: the source can now describe a graph (parents, times,
 //! ref names) so `core::Pane` layout tests can assert lanes per commit.
 
-use groves_core::{Commit, CommitSource};
-use std::path::PathBuf;
-use std::process::Command;
+use groves_core::{Commit, CommitSource, GitRef, RefKind, RefSnapshot};
+use std::{
+    path::PathBuf,
+    process::Command,
+    time::{SystemTime, UNIX_EPOCH},
+};
 
 /// A synthetic source that yields exactly the commits it was built with,
 /// newest first. Drives `core::Pane` without touching git.
 pub struct SyntheticSource {
     commits: Vec<Commit>,
+    ref_snapshot: RefSnapshot,
 }
 
 /// One commit of a synthetic graph: ids are free-form strings in tests
@@ -25,24 +29,40 @@ pub struct GraphCommit {
 }
 
 impl SyntheticSource {
-    /// Build from `(full_sha, title)` pairs in newest-first order.
-    /// No parents, no refs — the ticket-01 shape. Kept so the skeleton
-    /// tests keep driving the same facade.
+    /// Build from `(full_sha, title)` pairs in newest-first order, chained
+    /// linearly (each commit's parent is the next-older commit, HEAD on the
+    /// tip) so every commit is reachable from the default ref set.
+    /// Descending times keep the old newest-first order temporal.
     pub fn new(newest_first: Vec<(String, String)>) -> Self {
         let n = newest_first.len();
+        let ids: Vec<String> = newest_first.iter().map(|(id, _)| id.clone()).collect();
+        let commits: Vec<Commit> = newest_first
+            .into_iter()
+            .enumerate()
+            .map(|(i, (id, title))| Commit {
+                id,
+                parents: ids.get(i + 1).map(|p| vec![p.clone()]).unwrap_or_default(),
+                // Descending times keep the old newest-first order temporal.
+                time: (n - i) as i64,
+                title,
+                refs: vec![],
+            })
+            .collect();
+        let ref_snapshot = commits
+            .first()
+            .map(|commit| {
+                RefSnapshot::new(vec![GitRef {
+                    name: "HEAD".to_string(),
+                    target: commit.id.clone(),
+                    kind: RefKind::WorktreeHead,
+                    tip_time: commit.time,
+                    upstream: None,
+                }])
+            })
+            .unwrap_or_default();
         Self {
-            commits: newest_first
-                .into_iter()
-                .enumerate()
-                .map(|(i, (id, title))| Commit {
-                    id,
-                    parents: vec![],
-                    // Descending times keep the old newest-first order temporal.
-                    time: (n - i) as i64,
-                    title,
-                    refs: vec![],
-                })
-                .collect(),
+            commits,
+            ref_snapshot,
         }
     }
 
@@ -67,6 +87,38 @@ impl SyntheticSource {
     /// Build from an explicit graph, given newest first (row order is the
     /// pane's job — it must reorder when this input isn't topological).
     pub fn for_graph(newest_first: Vec<GraphCommit>) -> Self {
+        let refs = newest_first
+            .iter()
+            .flat_map(|commit| {
+                commit.refs.iter().map(move |name| {
+                    let kind = if name == "HEAD" {
+                        RefKind::WorktreeHead
+                    } else if name.starts_with("refs/tags/") {
+                        RefKind::Tag
+                    } else if let Some(remote) =
+                        name.split('/').next().filter(|_| name.contains('/'))
+                    {
+                        RefKind::Remote {
+                            remote: remote.to_string(),
+                        }
+                    } else {
+                        RefKind::Local
+                    };
+                    GitRef {
+                        name: name.clone(),
+                        target: commit.id.clone(),
+                        kind,
+                        tip_time: commit.time,
+                        upstream: None,
+                    }
+                })
+            })
+            .collect();
+        Self::for_graph_with_refs(newest_first, refs)
+    }
+
+    /// Build a graph and an explicit ref snapshot for default-ref-set tests.
+    pub fn for_graph_with_refs(newest_first: Vec<GraphCommit>, refs: Vec<GitRef>) -> Self {
         Self {
             commits: newest_first
                 .into_iter()
@@ -78,15 +130,24 @@ impl SyntheticSource {
                     refs: g.refs,
                 })
                 .collect(),
+            ref_snapshot: RefSnapshot::new(refs),
         }
     }
 
+    /// Preset times (100–400) are toy values for *relative* order only.
+    /// Since ticket 03 the staleness window compares remote-ref tip times
+    /// against the real clock, so `g` maps them into the recent past of the
+    /// actual wall clock: order-preserving, always inside the window.
     fn g(id: &str, parents: &[&str], title: &str, time: i64, refs: &[&str]) -> GraphCommit {
+        let now = SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .expect("system clock is after the Unix epoch")
+            .as_secs() as i64;
         GraphCommit {
             id: id.to_string(),
             parents: parents.iter().map(|p| (*p).to_string()).collect(),
             title: title.to_string(),
-            time,
+            time: now - (500 - time),
             refs: refs.iter().map(|r| (*r).to_string()).collect(),
         }
     }
@@ -153,6 +214,10 @@ impl SyntheticSource {
 impl CommitSource for SyntheticSource {
     fn commits(&self) -> Vec<Commit> {
         self.commits.clone()
+    }
+
+    fn ref_snapshot(&self) -> &RefSnapshot {
+        &self.ref_snapshot
     }
 }
 
@@ -224,4 +289,83 @@ pub fn init_branch_fixture_repo() -> PathBuf {
         &["merge", "-q", "--no-ff", "-m", "Merge side branch", "side"],
     );
     dir
+}
+
+/// Build a fixture with a local branch and configured upstream, packed branch
+/// refs, one loose remote branch, a symbolic `origin/HEAD`, and a tag.
+pub fn init_ref_fixture_repo() -> PathBuf {
+    let dir = fresh_dir("ref-fixture");
+    git(&dir, &["init", "-q", "-b", "main"]);
+    // The remote must exist in config so `branch.main.remote = origin`
+    // resolves: gix maps branch.main.merge through the remote's fetch
+    // refspecs to find the tracking ref.
+    git(
+        &dir,
+        &[
+            "remote",
+            "add",
+            "origin",
+            "https://example.invalid/groves.git",
+        ],
+    );
+
+    std::fs::write(dir.join("root.txt"), "root\n").expect("write root file");
+    git(&dir, &["add", "."]);
+    git(&dir, &["commit", "-q", "-m", "Root"]);
+    git(&dir, &["checkout", "-q", "-b", "active"]);
+    std::fs::write(dir.join("active.txt"), "active\n").expect("write active file");
+    git(&dir, &["add", "."]);
+    git(&dir, &["commit", "-q", "-m", "Active branch"]);
+    let active = git_output(&dir, &["rev-parse", "HEAD"]);
+
+    git(&dir, &["checkout", "-q", "main"]);
+    std::fs::write(dir.join("main.txt"), "main\n").expect("write main file");
+    git(&dir, &["add", "."]);
+    git(&dir, &["commit", "-q", "-m", "Main branch"]);
+    let main = git_output(&dir, &["rev-parse", "HEAD"]);
+
+    git(&dir, &["checkout", "-q", "--orphan", "old"]);
+    git(&dir, &["rm", "-q", "-rf", "."]);
+    std::fs::write(dir.join("old.txt"), "old history\n").expect("write old history");
+    git(&dir, &["add", "."]);
+    git(&dir, &["commit", "-q", "-m", "Old remote history"]);
+    let old = git_output(&dir, &["rev-parse", "HEAD"]);
+    git(&dir, &["checkout", "-q", "main"]);
+
+    git(&dir, &["config", "branch.main.remote", "origin"]);
+    git(&dir, &["config", "branch.main.merge", "refs/heads/main"]);
+    git(&dir, &["update-ref", "refs/remotes/origin/main", &main]);
+    git(&dir, &["update-ref", "refs/remotes/origin/active", &active]);
+    git(&dir, &["update-ref", "refs/remotes/origin/stale", &old]);
+    git(
+        &dir,
+        &[
+            "symbolic-ref",
+            "refs/remotes/origin/HEAD",
+            "refs/remotes/origin/main",
+        ],
+    );
+    git(&dir, &["tag", "v1", &old]);
+    git(&dir, &["pack-refs", "--all"]);
+
+    // Leave this ref loose so repo tests exercise packed and loose storage.
+    git(&dir, &["update-ref", "refs/remotes/origin/loose", &active]);
+    dir
+}
+
+fn git_output(dir: &std::path::Path, args: &[&str]) -> String {
+    let output = Command::new("git")
+        .args(args)
+        .current_dir(dir)
+        .output()
+        .expect("git must be on PATH for fixture setup");
+    assert!(
+        output.status.success(),
+        "git {args:?} failed in {}",
+        dir.display()
+    );
+    String::from_utf8(output.stdout)
+        .expect("git output is UTF-8")
+        .trim()
+        .to_string()
 }
