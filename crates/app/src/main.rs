@@ -5,6 +5,7 @@ use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
+use groves_app::render::route_edge;
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
@@ -72,73 +73,111 @@ impl eframe::App for GrovesApp {
 
                             // lines
                             let range_start = row_range.start;
+                            let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
                             for edge in pane.edges().iter() {
                                 if edge.parent_row <= range.start.saturating_sub(1)
                                     || edge.child_row >= row_range.end
                                 {
                                     continue;
                                 }
-                                let start_y = calc_y(top, range_start, edge.child_row);
-                                let end_y = calc_y(top, range_start, edge.parent_row);
-                                let start_x = calc_x(left, 8.0, edge.child_lane);
-                                let end_x = calc_x(left, 8.0, edge.parent_lane);
 
-                                let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
-                                if start_x == end_x {
-                                    painter.line_segment(
-                                        [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
-                                        st,
-                                    );
-                                } else {
-                                    let mut pts = [
-                                        Pos2::new(start_x, start_y),
-                                        Pos2::new(start_x, start_y + row_height * 0.55),
-                                        Pos2::new(end_x, end_y - row_height * 0.55),
-                                        Pos2::new(end_x, end_y),
-                                    ];
-                                    if end_y - start_y > 1.1 * ROW_HEIGHT_PX {
-                                        if edge.is_merge {
-                                            let helper_y =
-                                                calc_y(top, range_start, edge.child_row + 1);
-                                            painter.line_segment(
-                                                [
-                                                    Pos2::new(end_x, helper_y),
-                                                    Pos2::new(end_x, end_y),
-                                                ],
-                                                st,
-                                            );
-                                            pts = [
-                                                Pos2::new(start_x, start_y),
-                                                Pos2::new(start_x, start_y + row_height * 0.55),
-                                                Pos2::new(end_x, helper_y - row_height * 0.55),
-                                                Pos2::new(end_x, helper_y),
-                                            ];
-                                        } else {
-                                            let helper_y =
-                                                calc_y(top, range_start, edge.parent_row - 1);
-                                            painter.line_segment(
-                                                [
-                                                    Pos2::new(start_x, start_y),
-                                                    Pos2::new(start_x, helper_y),
-                                                ],
-                                                st,
-                                            );
-                                            pts = [
-                                                Pos2::new(start_x, helper_y),
-                                                Pos2::new(start_x, helper_y + row_height * 0.55),
-                                                Pos2::new(end_x, end_y - row_height * 0.55),
-                                                Pos2::new(end_x, end_y),
-                                            ];
-                                        }
-                                    }
-                                    painter.add(
-                                        egui::epaint::CubicBezierShape::from_points_stroke(
-                                            pts,
-                                            false,
-                                            Color32::TRANSPARENT,
+                                let points = route_edge(edge);
+                                for point_index in 1..points.len() {
+                                    let (last_row, last_lane) = points[point_index - 1];
+                                    let (row, lane) = points[point_index];
+
+                                    let start_y = calc_y(top, range_start, last_row);
+                                    let end_y = calc_y(top, range_start, row);
+                                    let start_x = calc_x(left, 8.0, last_lane);
+                                    let end_x = calc_x(left, 8.0, lane);
+
+                                    let dir = if edge.parent_lane > edge.child_lane {
+                                        -1.0
+                                    } else {
+                                        1.0
+                                    };
+
+                                    if start_x == end_x {
+                                        painter.line_segment(
+                                            [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
                                             st,
-                                        ),
-                                    );
+                                        );
+                                    } else if edge.is_first_parent {
+                                        painter.line_segment(
+                                            [
+                                                Pos2::new(start_x, end_y - 1.0 * ROW_HEIGHT_PX),
+                                                Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
+                                            ],
+                                            st,
+                                        );
+                                        painter.add(
+                                            egui::epaint::CubicBezierShape::from_points_stroke(
+                                                [
+                                                    Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
+                                                    Pos2::new(start_x, end_y - 0.2 * ROW_HEIGHT_PX),
+                                                    Pos2::new(
+                                                        start_x - 0.2 * dir * LANE_WIDTH_PX,
+                                                        end_y,
+                                                    ),
+                                                    Pos2::new(
+                                                        start_x - 0.5 * dir * LANE_WIDTH_PX,
+                                                        end_y,
+                                                    ),
+                                                ],
+                                                false,
+                                                Color32::TRANSPARENT,
+                                                st,
+                                            ),
+                                        );
+                                        painter.line_segment(
+                                            [
+                                                Pos2::new(
+                                                    start_x - 0.5 * dir * LANE_WIDTH_PX,
+                                                    end_y,
+                                                ),
+                                                Pos2::new(end_x, end_y),
+                                            ],
+                                            st,
+                                        );
+                                    } else {
+                                        painter.line_segment(
+                                            [
+                                                Pos2::new(start_x, start_y),
+                                                Pos2::new(
+                                                    end_x + 0.5 * dir * LANE_WIDTH_PX,
+                                                    start_y,
+                                                ),
+                                            ],
+                                            st,
+                                        );
+                                        painter.add(
+                                            egui::epaint::CubicBezierShape::from_points_stroke(
+                                                [
+                                                    Pos2::new(
+                                                        end_x + 0.5 * dir * LANE_WIDTH_PX,
+                                                        start_y,
+                                                    ),
+                                                    Pos2::new(
+                                                        end_x - 0.1 * dir * LANE_WIDTH_PX,
+                                                        start_y,
+                                                    ),
+                                                    Pos2::new(end_x, end_y - 0.4 * ROW_HEIGHT_PX),
+                                                    Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
+                                                ],
+                                                false,
+                                                Color32::TRANSPARENT,
+                                                st,
+                                            ),
+                                        );
+
+                                        painter.line_segment(
+                                            [
+                                                Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
+                                                Pos2::new(end_x, end_y + 0.5 * ROW_HEIGHT_PX),
+                                            ],
+                                            st,
+                                        );
+                                    }
                                 }
                             }
 
