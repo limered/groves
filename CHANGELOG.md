@@ -2,6 +2,14 @@
 
 User-facing changes per release. Each section is written by the `release` skill and also serves as the text of the GitHub Release.
 
+## [0.3.1] - 2026-11-03
+
+### Fixed
+- Edge lines no longer thread straight through the commits they pass: a line keeps its own lane and bends once into the parent's line, so branch lines no longer fuse with merge curves on busy graphs — bends read like `git log --graph`.
+
+### Changed
+- Edges bend with one constant rounded corner plus a straight run, the same shape at every lane distance, instead of a full-gap curve.
+
 ## [0.3.0] - 2026-11-02
 
 ### Added
