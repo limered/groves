@@ -11,6 +11,20 @@ pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
     now - tip_time > stale_after_days * DAY_SECONDS
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Pill {
+    pub name: String,
+    pub style: PillStyle,
+    pub plus_count: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PillStyle {
+    Filled,
+    Outline,
+    Synced,
+}
+
 #[derive(Clone, Debug)]
 pub struct Commit {
     pub id: String,
@@ -58,6 +72,7 @@ pub struct Row {
     pub title: String,
     pub lane: usize,
     pub is_merge: bool,
+    pub pill: Option<Pill>,
 }
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Edge {
@@ -123,15 +138,35 @@ impl Pane {
             &row_ids,
         );
 
+        let mut commit_to_ref: HashMap<String, Vec<GitRef>> = HashMap::new();
+        for r in all_refs {
+            let t = r.target.clone();
+            commit_to_ref.entry(t.clone().to_owned()).or_default().push(r.clone());
+        }
+
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
                 let c = &filtered_commits[*index];
+                let commit_refs = commit_to_ref.entry(c.id.clone()).or_default();
+                let mut pill: Option<Pill> = None;
+                if !commit_refs.is_empty() {
+                    let len = commit_refs.len().saturating_sub(1);
+                    let visible_ref = commit_refs[0].name.clone();
+                    let pill_type = PillStyle::Filled;
+                    pill = Some(Pill{
+                        name: visible_ref,
+                        plus_count: len,
+                        style: pill_type,
+                    });
+                }
+                
                 rows.push(Row {
                     id: c.id.clone(),
                     short: c.id.get(..7).unwrap_or(&c.id).to_string(),
                     title: c.title.clone(),
                     lane: lanes[*index],
                     is_merge: c.parents.len() > 1,
+                    pill,
                 });
                 for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {

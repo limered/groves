@@ -55,6 +55,10 @@ impl eframe::App for GrovesApp {
                                     font.clone(),
                                     FG,
                                 );
+                                let row_text = match &row.pill {
+                                    Some(p) => p.name.clone(),
+                                    None => row.title.clone(),
+                                };
                                 painter.text(
                                     Pos2::new(
                                         calc_x(
@@ -65,7 +69,7 @@ impl eframe::App for GrovesApp {
                                         calc_y(top, range.start, row_id),
                                     ),
                                     Align2::LEFT_CENTER,
-                                    &row.title,
+                                    row_text,
                                     font.clone(),
                                     FG,
                                 );
