@@ -87,7 +87,7 @@ fn two_merge_shape() -> Pane {
     Pane::load(&source)
 }
 
-fn edge_of<'a>(pane: &'a Pane, child_row: usize, parent_row: usize) -> &'a groves_core::Edge {
+fn edge_of(pane: &Pane, child_row: usize, parent_row: usize) -> &groves_core::Edge {
     pane.edges()
         .iter()
         .find(|e| e.child_row == child_row && e.parent_row == parent_row)
