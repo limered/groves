@@ -4,12 +4,14 @@
 use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
-use egui::{Color32, FontId, Pos2, Stroke};
+use egui::{Align2, Color32, FontId, Pos2, Stroke};
+use egui::Shape::Rect;
 use groves_app::render::{draw_pill, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
 const FG: Color32 = Color32::from_rgb(0xD8, 0xDC, 0xE3);
+const WIDTH_PILL_AREA: f32 = 120.0;
 
 struct GrovesApp {
     content: Result<Pane, String>,
@@ -59,8 +61,8 @@ impl eframe::App for GrovesApp {
 
                                     let start_y = calc_y(top, range_start, last_row);
                                     let end_y = calc_y(top, range_start, row);
-                                    let start_x = calc_x(left, 8.0, last_lane);
-                                    let end_x = calc_x(left, 8.0, lane);
+                                    let start_x = calc_x(left + WIDTH_PILL_AREA, 8.0, last_lane);
+                                    let end_x = calc_x(left + WIDTH_PILL_AREA, 8.0, lane);
 
                                     let dir = if edge.parent_lane > edge.child_lane {
                                         -1.0
@@ -155,7 +157,7 @@ impl eframe::App for GrovesApp {
                             // draw dots
                             for row_id in range.clone() {
                                 let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
-                                let x = calc_x(left, 8.0, pane.rows()[row_id].lane);
+                                let x = calc_x(left + WIDTH_PILL_AREA, 8.0, pane.rows()[row_id].lane);
                                 let y = calc_y(top, range_start, row_id);
 
                                 if pane.rows()[row_id].is_merge {
@@ -176,47 +178,47 @@ impl eframe::App for GrovesApp {
                             }
 
                             // draw texts
+                            let sub_rect = egui::Rect::from_min_size(Pos2::ZERO, Vec2::new(120.0, resp.rect.height()));
+                            let pill_painter = painter.with_clip_rect(sub_rect);
                             for row_id in range.clone() {
                                 let row = &pane.rows()[row_id];
-                                let pill = &row.pill;
-                                if pill.is_some() {
-                                    let p = pill.clone().unwrap();
+                                if let Some(pill) = &row.pill {
                                     let pill_pos = Pos2::new(
-                                        calc_x(left, 20.0 + pane.graph_width_px(), 0),
+                                        calc_x(left, 8.0, 0),
                                         calc_y(top, range_start, row_id),
                                     );
 
-                                    draw_pill(&p, pill_pos, &painter, font.clone(), FG)
+                                    draw_pill(pill, pill_pos, &pill_painter, font.clone(), FG)
                                 }
 
-                                // painter.text(
-                                //     Pos2::new(
-                                //         calc_x(left, 8.0 + pane.graph_width_px(), 0),
-                                //         calc_y(top, range.start, row_id),
-                                //     ),
-                                //     Align2::LEFT_CENTER,
-                                //     &row.short,
-                                //     font.clone(),
-                                //     FG,
-                                // );
-                                // let row_text = match &row.pill {
-                                //     Some(p) => p.name.clone(),
-                                //     None => row.title.clone(),
-                                // };
-                                // painter.text(
-                                //     Pos2::new(
-                                //         calc_x(
-                                //             left,
-                                //             8.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
-                                //             0,
-                                //         ),
-                                //         calc_y(top, range.start, row_id),
-                                //     ),
-                                //     Align2::LEFT_CENTER,
-                                //     row_text,
-                                //     font.clone(),
-                                //     FG,
-                                // );
+                                painter.text(
+                                    Pos2::new(
+                                        calc_x(left + WIDTH_PILL_AREA, 16.0 + pane.graph_width_px(), 0),
+                                        calc_y(top, range.start, row_id),
+                                    ),
+                                    Align2::LEFT_CENTER,
+                                    &row.short,
+                                    font.clone(),
+                                    FG,
+                                );
+                                let row_text = match &row.pill {
+                                    Some(p) => p.name.clone(),
+                                    None => row.title.clone(),
+                                };
+                                painter.text(
+                                    Pos2::new(
+                                        calc_x(
+                                            left + WIDTH_PILL_AREA,
+                                            16.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
+                                            0,
+                                        ),
+                                        calc_y(top, range.start, row_id),
+                                    ),
+                                    Align2::LEFT_CENTER,
+                                    row_text,
+                                    font.clone(),
+                                    FG,
+                                );
                             }
                         },
                     );
