@@ -4,8 +4,8 @@
 use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
-use egui::{Align2, Color32, FontId, Pos2, Stroke};
 use egui::Shape::Rect;
+use egui::{Align2, Color32, FontId, Pos2, Stroke};
 use groves_app::render::{draw_pill, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
@@ -157,7 +157,8 @@ impl eframe::App for GrovesApp {
                             // draw dots
                             for row_id in range.clone() {
                                 let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
-                                let x = calc_x(left + WIDTH_PILL_AREA, 8.0, pane.rows()[row_id].lane);
+                                let x =
+                                    calc_x(left + WIDTH_PILL_AREA, 8.0, pane.rows()[row_id].lane);
                                 let y = calc_y(top, range_start, row_id);
 
                                 if pane.rows()[row_id].is_merge {
@@ -178,7 +179,10 @@ impl eframe::App for GrovesApp {
                             }
 
                             // draw texts
-                            let sub_rect = egui::Rect::from_min_size(Pos2::ZERO, Vec2::new(120.0, resp.rect.height()));
+                            let sub_rect = egui::Rect::from_min_size(
+                                Pos2::ZERO,
+                                Vec2::new(120.0, resp.rect.height()),
+                            );
                             let pill_painter = painter.with_clip_rect(sub_rect);
                             for row_id in range.clone() {
                                 let row = &pane.rows()[row_id];
@@ -193,7 +197,11 @@ impl eframe::App for GrovesApp {
 
                                 painter.text(
                                     Pos2::new(
-                                        calc_x(left + WIDTH_PILL_AREA, 16.0 + pane.graph_width_px(), 0),
+                                        calc_x(
+                                            left + WIDTH_PILL_AREA,
+                                            16.0 + pane.graph_width_px(),
+                                            0,
+                                        ),
                                         calc_y(top, range.start, row_id),
                                     ),
                                     Align2::LEFT_CENTER,

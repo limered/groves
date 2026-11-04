@@ -34,7 +34,7 @@ pub struct Commit {
     pub refs: Vec<String>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum RefKind {
     Local,
     Remote { remote: String },
@@ -150,17 +150,8 @@ impl Pane {
             if placed[*index] {
                 let c = &filtered_commits[*index];
                 let commit_refs = commit_to_ref.entry(c.id.clone()).or_default();
-                let mut pill: Option<Pill> = None;
-                if !commit_refs.is_empty() {
-                    let len = commit_refs.len().saturating_sub(1);
-                    let visible_ref = commit_refs[0].name.clone();
-                    let pill_type = PillStyle::Filled;
-                    pill = Some(Pill {
-                        name: visible_ref,
-                        plus_count: len,
-                        style: pill_type,
-                    });
-                }
+                let pill: Option<Pill> = Self::build_pill(commit_refs);
+
                 for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {
                         continue;
@@ -192,7 +183,54 @@ impl Pane {
             }
         }
 
-        Pane { lane_count, rows, edges }
+        Pane {
+            lane_count,
+            rows,
+            edges,
+        }
+    }
+
+    fn build_pill(commit_refs: &mut [GitRef]) -> Option<Pill> {
+        let mut pill: Option<Pill> = None;
+        if !commit_refs.is_empty() {
+            // sort name first, then by kind
+            let mut filtered: Vec<&GitRef> = commit_refs
+                .iter()
+                .filter(|r| {
+                    r.kind == RefKind::Local || matches!(r.kind, RefKind::Remote { remote: _ })
+                })
+                .filter(|r| !r.name.eq("origin/HEAD"))
+                .collect();
+
+            if filtered.is_empty() {
+                return None;
+            }
+
+            filtered.sort_by_key(|r| r.name.clone());
+            filtered.sort_by_key(|r| r.kind.clone());
+
+            // derive style
+            let visible_ref = filtered[0];
+            let mut style = if visible_ref.kind == RefKind::Local {
+                PillStyle::Filled
+            } else {
+                PillStyle::Outline
+            };
+            if let Some(upstream) = &visible_ref.upstream
+                && filtered.iter().find(|r| r.name.eq(upstream)).is_some()
+            {
+                style = PillStyle::Synced;
+                filtered.remove(filtered.iter().position(|r| r.name.eq(upstream))?);
+            }
+
+            let plus_count = filtered.len().saturating_sub(1);
+            pill = Some(Pill {
+                name: visible_ref.name.clone(),
+                plus_count,
+                style,
+            });
+        }
+        pill
     }
 
     fn calculate_lane_ids(

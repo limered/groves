@@ -31,10 +31,7 @@ pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, col: C
     let padding = vec2(8.0, 2.0);
     let bg = Color32::from_rgb(50, 90, 150);
 
-    let start = pill.name.char_indices()
-        .rev()
-        .nth(10)
-        .map_or(0, |(i, _)| i);
+    let start = pill.name.char_indices().rev().nth(10).map_or(0, |(i, _)| i);
 
     let pill_text = &pill.name[start..];
     let galley = painter.layout_no_wrap(pill_text.to_string(), font.clone(), col);
