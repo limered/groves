@@ -29,7 +29,7 @@ pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, col: C
     let mut centered_pos = pos;
     centered_pos.y -= ROW_HEIGHT_PX / 2.0;
     let padding = vec2(8.0, 2.0);
-    let bg = Color32::from_rgb(50, 90, 150);
+    let bg = Color32::from_rgb(0x5C, 0x78, 0x55); // #5c7855
 
     let start = pill.name.char_indices().rev().nth(10).map_or(0, |(i, _)| i);
 

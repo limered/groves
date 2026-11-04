@@ -10,7 +10,7 @@ use groves_app::render::{draw_pill, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
-const FG: Color32 = Color32::from_rgb(0xD8, 0xDC, 0xE3);
+const FG: Color32 = Color32::from_rgb(0xC0, 0xDA, 0xDE); //#c0dade
 const WIDTH_PILL_AREA: f32 = 120.0;
 
 struct GrovesApp {
@@ -20,8 +20,8 @@ struct GrovesApp {
 impl eframe::App for GrovesApp {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("Groves");
-            ui.separator();
+            // ui.heading("Groves");
+            // ui.separator();
             match &self.content {
                 Ok(pane) => {
                     let row_height = ROW_HEIGHT_PX;
@@ -39,6 +39,9 @@ impl eframe::App for GrovesApp {
                                 Vec2::new(full.width(), row_range.len() as f32 * row_height),
                                 Sense::click(),
                             );
+                            let bg_col = Color32::from_hex("#38232f").unwrap();
+                            painter.rect_filled(resp.rect, 0.0, bg_col);
+
                             let top = resp.rect.top();
                             let left = resp.rect.left();
 
@@ -46,7 +49,7 @@ impl eframe::App for GrovesApp {
 
                             // edges
                             let range_start = row_range.start;
-                            let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
+                            let st = Stroke::new(2.0, Color32::from_hex("#5c7855").unwrap());
                             for edge in pane.edges().iter() {
                                 if edge.parent_row <= range.start.saturating_sub(1)
                                     || edge.child_row >= row_range.end
@@ -156,7 +159,7 @@ impl eframe::App for GrovesApp {
 
                             // draw dots
                             for row_id in range.clone() {
-                                let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
+                                let st = Stroke::new(2.0, Color32::from_rgb(0x5c, 0x78, 0x55)); // #5c7855
                                 let x =
                                     calc_x(left + WIDTH_PILL_AREA, 8.0, pane.rows()[row_id].lane);
                                 let y = calc_y(top, range_start, row_id);
@@ -165,14 +168,14 @@ impl eframe::App for GrovesApp {
                                     painter.circle(
                                         Pos2::new(x, y),
                                         2.0,
-                                        Color32::from_rgb(0x4F, 0xC3, 0xF7),
+                                        Color32::from_rgb(0x5c, 0x78, 0x55),
                                         st,
                                     );
                                 } else {
                                     painter.circle(
                                         Pos2::new(x, y),
                                         3.5,
-                                        Color32::from_rgb(0xFF, 0x0, 0x0),
+                                        Color32::from_rgb(0x1E, 0x37, 0x3C), // #1e373c
                                         st,
                                     );
                                 }
@@ -209,10 +212,6 @@ impl eframe::App for GrovesApp {
                                     font.clone(),
                                     FG,
                                 );
-                                let row_text = match &row.pill {
-                                    Some(p) => p.name.clone(),
-                                    None => row.title.clone(),
-                                };
                                 painter.text(
                                     Pos2::new(
                                         calc_x(
@@ -223,7 +222,7 @@ impl eframe::App for GrovesApp {
                                         calc_y(top, range.start, row_id),
                                     ),
                                     Align2::LEFT_CENTER,
-                                    row_text,
+                                    row.title.clone(),
                                     font.clone(),
                                     FG,
                                 );
