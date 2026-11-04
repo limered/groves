@@ -4,8 +4,8 @@
 use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
-use egui::{Align2, Color32, FontId, Pos2, Stroke};
-use groves_app::render::route_edge;
+use egui::{Color32, FontId, Pos2, Stroke};
+use groves_app::render::{draw_pill, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
@@ -42,40 +42,7 @@ impl eframe::App for GrovesApp {
 
                             let font = FontId::monospace(13.0);
 
-                            // draw texts
-                            for row_id in range.clone() {
-                                let row = &pane.rows()[row_id];
-                                painter.text(
-                                    Pos2::new(
-                                        calc_x(left, 8.0 + pane.graph_width_px(), 0),
-                                        calc_y(top, range.start, row_id),
-                                    ),
-                                    Align2::LEFT_CENTER,
-                                    &row.short,
-                                    font.clone(),
-                                    FG,
-                                );
-                                let row_text = match &row.pill {
-                                    Some(p) => p.name.clone(),
-                                    None => row.title.clone(),
-                                };
-                                painter.text(
-                                    Pos2::new(
-                                        calc_x(
-                                            left,
-                                            8.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
-                                            0,
-                                        ),
-                                        calc_y(top, range.start, row_id),
-                                    ),
-                                    Align2::LEFT_CENTER,
-                                    row_text,
-                                    font.clone(),
-                                    FG,
-                                );
-                            }
-
-                            // lines
+                            // edges
                             let range_start = row_range.start;
                             let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
                             for edge in pane.edges().iter() {
@@ -206,6 +173,50 @@ impl eframe::App for GrovesApp {
                                         st,
                                     );
                                 }
+                            }
+
+                            // draw texts
+                            for row_id in range.clone() {
+                                let row = &pane.rows()[row_id];
+                                let pill = &row.pill;
+                                if pill.is_some() {
+                                    let p = pill.clone().unwrap();
+                                    let pill_pos = Pos2::new(
+                                        calc_x(left, 20.0 + pane.graph_width_px(), 0),
+                                        calc_y(top, range_start, row_id),
+                                    );
+
+                                    draw_pill(&p, pill_pos, &painter, font.clone(), FG)
+                                }
+
+                                // painter.text(
+                                //     Pos2::new(
+                                //         calc_x(left, 8.0 + pane.graph_width_px(), 0),
+                                //         calc_y(top, range.start, row_id),
+                                //     ),
+                                //     Align2::LEFT_CENTER,
+                                //     &row.short,
+                                //     font.clone(),
+                                //     FG,
+                                // );
+                                // let row_text = match &row.pill {
+                                //     Some(p) => p.name.clone(),
+                                //     None => row.title.clone(),
+                                // };
+                                // painter.text(
+                                //     Pos2::new(
+                                //         calc_x(
+                                //             left,
+                                //             8.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
+                                //             0,
+                                //         ),
+                                //         calc_y(top, range.start, row_id),
+                                //     ),
+                                //     Align2::LEFT_CENTER,
+                                //     row_text,
+                                //     font.clone(),
+                                //     FG,
+                                // );
                             }
                         },
                     );
