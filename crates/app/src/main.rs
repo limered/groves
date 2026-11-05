@@ -4,14 +4,13 @@
 use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
-use egui::Shape::Rect;
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
 use groves_app::render::{draw_pill, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
 const FG: Color32 = Color32::from_rgb(0xC0, 0xDA, 0xDE); //#c0dade
-const WIDTH_PILL_AREA: f32 = 120.0;
+const WIDTH_PILL_AREA: f32 = 150.0;
 
 struct GrovesApp {
     content: Result<Pane, String>,
@@ -184,7 +183,7 @@ impl eframe::App for GrovesApp {
                             // draw texts
                             let sub_rect = egui::Rect::from_min_size(
                                 Pos2::ZERO,
-                                Vec2::new(120.0, resp.rect.height()),
+                                Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
                             );
                             let pill_painter = painter.with_clip_rect(sub_rect);
                             for row_id in range.clone() {
@@ -195,7 +194,13 @@ impl eframe::App for GrovesApp {
                                         calc_y(top, range_start, row_id),
                                     );
 
-                                    draw_pill(pill, pill_pos, &pill_painter, font.clone(), FG)
+                                    draw_pill(
+                                        pill,
+                                        pill_pos,
+                                        &pill_painter,
+                                        font.clone(),
+                                        Color32::from_rgb(0x5C, 0x78, 0x55), // #5c7855
+                                    );
                                 }
 
                                 painter.text(
