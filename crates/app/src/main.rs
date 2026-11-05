@@ -5,6 +5,7 @@ use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
+use groves_app::colors::lane_color;
 use groves_app::render::{draw_pill, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
@@ -48,13 +49,17 @@ impl eframe::App for GrovesApp {
 
                             // edges
                             let range_start = row_range.start;
-                            let st = Stroke::new(2.0, Color32::from_hex("#5c7855").unwrap());
                             for edge in pane.edges().iter() {
                                 if edge.parent_row <= range.start.saturating_sub(1)
                                     || edge.child_row >= row_range.end
                                 {
                                     continue;
                                 }
+                                let col_this = lane_color(edge.parent_lane);
+                                let st_this = Stroke::new(2.0, col_this);
+
+                                let col_other = lane_color(edge.child_lane);
+                                let st_other = Stroke::new(2.0, col_other);
 
                                 let points = route_edge(edge);
                                 for point_index in 1..points.len() {
@@ -72,18 +77,26 @@ impl eframe::App for GrovesApp {
                                         1.0
                                     };
 
-                                    if start_x == end_x {
+                                    if edge.parent_lane == edge.child_lane {
                                         painter.line_segment(
                                             [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
-                                            st,
+                                            st_this,
                                         );
-                                    } else if edge.is_first_parent {
+                                    } else if start_x == end_x{
+                                        painter.line_segment(
+                                            [
+                                                Pos2::new(start_x, start_y),
+                                                Pos2::new(end_x, end_y),
+                                            ],
+                                            if edge.is_first_parent { st_other } else { st_this },
+                                        );
+                                    }else if edge.is_first_parent {
                                         painter.line_segment(
                                             [
                                                 Pos2::new(start_x, end_y - 1.0 * ROW_HEIGHT_PX),
                                                 Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
                                             ],
-                                            st,
+                                            st_other,
                                         );
                                         painter.add(
                                             egui::epaint::CubicBezierShape::from_points_stroke(
@@ -101,7 +114,7 @@ impl eframe::App for GrovesApp {
                                                 ],
                                                 false,
                                                 Color32::TRANSPARENT,
-                                                st,
+                                                st_other,
                                             ),
                                         );
                                         painter.line_segment(
@@ -112,7 +125,7 @@ impl eframe::App for GrovesApp {
                                                 ),
                                                 Pos2::new(end_x, end_y),
                                             ],
-                                            st,
+                                            st_other,
                                         );
                                     } else {
                                         painter.line_segment(
@@ -123,7 +136,7 @@ impl eframe::App for GrovesApp {
                                                     start_y,
                                                 ),
                                             ],
-                                            st,
+                                            st_this,
                                         );
                                         painter.add(
                                             egui::epaint::CubicBezierShape::from_points_stroke(
@@ -141,7 +154,7 @@ impl eframe::App for GrovesApp {
                                                 ],
                                                 false,
                                                 Color32::TRANSPARENT,
-                                                st,
+                                                st_this,
                                             ),
                                         );
 
@@ -150,7 +163,7 @@ impl eframe::App for GrovesApp {
                                                 Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
                                                 Pos2::new(end_x, end_y + 0.5 * ROW_HEIGHT_PX),
                                             ],
-                                            st,
+                                            st_this,
                                         );
                                     }
                                 }
@@ -158,7 +171,8 @@ impl eframe::App for GrovesApp {
 
                             // draw dots
                             for row_id in range.clone() {
-                                let st = Stroke::new(2.0, Color32::from_rgb(0x5c, 0x78, 0x55)); // #5c7855
+                                let row = &pane.rows()[row_id];
+                                let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
                                 let x =
                                     calc_x(left + WIDTH_PILL_AREA, 8.0, pane.rows()[row_id].lane);
                                 let y = calc_y(top, range_start, row_id);
@@ -167,7 +181,7 @@ impl eframe::App for GrovesApp {
                                     painter.circle(
                                         Pos2::new(x, y),
                                         2.0,
-                                        Color32::from_rgb(0x5c, 0x78, 0x55),
+                                        lane_color(row.lane),
                                         st,
                                     );
                                 } else {
@@ -199,7 +213,7 @@ impl eframe::App for GrovesApp {
                                         pill_pos,
                                         &pill_painter,
                                         font.clone(),
-                                        Color32::from_rgb(0x5C, 0x78, 0x55), // #5c7855
+                                        lane_color(row.lane),
                                     );
                                 }
 

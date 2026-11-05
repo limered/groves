@@ -4,7 +4,7 @@
 //! waypoints — goes here in this module.
 
 use eframe::epaint::Stroke;
-use egui::{vec2, Color32, FontId, Painter, Pos2, StrokeKind};
+use egui::{Color32, FontId, Painter, Pos2, StrokeKind, vec2};
 use groves_core::{Edge, Pill, PillStyle, ROW_HEIGHT_PX};
 
 pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
@@ -30,19 +30,28 @@ pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, pill_c
     let mut centered_pos = pos;
     centered_pos.y -= ROW_HEIGHT_PX / 2.0;
     let padding = vec2(8.0, 2.0);
-    let text_col = Color32::from_rgb(0xC0, 0xDA, 0xDE); // #c0dade
 
     let pill_text_parts: Vec<&str> = pill.name.split('/').collect();
-    let mut branch_text = pill_text_parts[pill_text_parts.len().saturating_sub(1)..pill_text_parts.len()].join("/");
+    let mut branch_text =
+        pill_text_parts[pill_text_parts.len().saturating_sub(1)..pill_text_parts.len()].join("/");
     if pill_text_parts.len() > 1 {
-        let branch_type = pill_text_parts[pill_text_parts.len().saturating_sub(2)].char_indices().next().unwrap();
-        branch_text = format!("{0}/{1}", branch_type.1.to_uppercase(), branch_text) ;
+        let branch_type = pill_text_parts[pill_text_parts.len().saturating_sub(2)]
+            .char_indices()
+            .next()
+            .unwrap();
+        branch_text = format!("{0}/{1}", branch_type.1.to_uppercase(), branch_text);
     }
-    
+
     if branch_text.len() > 15 {
         branch_text = branch_text[0..15].to_string();
     }
 
+    
+    let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
+    if pill.style == PillStyle::Outline{
+        text_col = pill_col;
+    }
+    
     let galley = painter.layout_no_wrap(branch_text.to_string(), font.clone(), text_col);
 
     let mut size = galley.size() + padding * 2.0;
@@ -53,7 +62,7 @@ pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, pill_c
 
     if pill.style == PillStyle::Filled || pill.style == PillStyle::Synced {
         painter.rect_filled(rect, radius, pill_col);
-    }else{
+    } else {
         let stroke = Stroke::new(1.0, pill_col);
         let stroke_kind = StrokeKind::Middle;
         painter.rect_stroke(rect, radius, stroke, stroke_kind);
