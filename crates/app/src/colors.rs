@@ -16,5 +16,5 @@ static BRANCH_COLORS: [Color32; 12] = [
 ];
 
 pub fn lane_color(lane: usize) -> Color32 {
-    BRANCH_COLORS[lane]
+    BRANCH_COLORS[lane % BRANCH_COLORS.len()]
 }
