@@ -26,7 +26,13 @@ pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
     points
 }
 
-pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, pill_col: Color32) {
+pub fn draw_pill(
+    pill: &Pill,
+    pos: Pos2,
+    painter: &Painter,
+    font: FontId,
+    pill_col: Color32,
+) -> f32 {
     let mut centered_pos = pos;
     centered_pos.y -= ROW_HEIGHT_PX / 2.0;
     let padding = vec2(8.0, 2.0);
@@ -42,16 +48,18 @@ pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, pill_c
         branch_text = format!("{0}/{1}", branch_type.1.to_uppercase(), branch_text);
     }
 
-    if branch_text.len() > 15 {
-        branch_text = branch_text[0..15].to_string();
+    if branch_text.len() > 12 {
+        branch_text = branch_text[0..12].to_string();
     }
-
     
+    if pill.plus_count > 0
+    { branch_text = format!("{0}|+{1}", branch_text, pill.plus_count); }
+
     let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
-    if pill.style == PillStyle::Outline{
+    if pill.style == PillStyle::Outline {
         text_col = pill_col;
     }
-    
+
     let galley = painter.layout_no_wrap(branch_text.to_string(), font.clone(), text_col);
 
     let mut size = galley.size() + padding * 2.0;
@@ -70,4 +78,10 @@ pub fn draw_pill(pill: &Pill, pos: Pos2, painter: &Painter, font: FontId, pill_c
 
     let text_pos = rect.center() - galley.size() / 2.0;
     painter.galley(text_pos, galley, text_col);
+    rect.width()
+}
+
+pub fn draw_pill_connector(pos: Pos2, dot_x: f32, painter: &Painter, color: Color32) {
+    let st = Stroke::new(0.5, color);
+    painter.line_segment([pos, Pos2::new(dot_x, pos.y)], st);
 }

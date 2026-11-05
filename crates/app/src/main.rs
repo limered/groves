@@ -6,7 +6,7 @@ use std::path::Path;
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
 use groves_app::colors::lane_color;
-use groves_app::render::{draw_pill, route_edge};
+use groves_app::render::{draw_pill, draw_pill_connector, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
@@ -82,15 +82,16 @@ impl eframe::App for GrovesApp {
                                             [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
                                             st_this,
                                         );
-                                    } else if start_x == end_x{
+                                    } else if start_x == end_x {
                                         painter.line_segment(
-                                            [
-                                                Pos2::new(start_x, start_y),
-                                                Pos2::new(end_x, end_y),
-                                            ],
-                                            if edge.is_first_parent { st_other } else { st_this },
+                                            [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
+                                            if edge.is_first_parent {
+                                                st_other
+                                            } else {
+                                                st_this
+                                            },
                                         );
-                                    }else if edge.is_first_parent {
+                                    } else if edge.is_first_parent {
                                         painter.line_segment(
                                             [
                                                 Pos2::new(start_x, end_y - 1.0 * ROW_HEIGHT_PX),
@@ -169,31 +170,6 @@ impl eframe::App for GrovesApp {
                                 }
                             }
 
-                            // draw dots
-                            for row_id in range.clone() {
-                                let row = &pane.rows()[row_id];
-                                let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
-                                let x =
-                                    calc_x(left + WIDTH_PILL_AREA, 8.0, pane.rows()[row_id].lane);
-                                let y = calc_y(top, range_start, row_id);
-
-                                if pane.rows()[row_id].is_merge {
-                                    painter.circle(
-                                        Pos2::new(x, y),
-                                        2.0,
-                                        lane_color(row.lane),
-                                        st,
-                                    );
-                                } else {
-                                    painter.circle(
-                                        Pos2::new(x, y),
-                                        3.5,
-                                        Color32::from_rgb(0x1E, 0x37, 0x3C), // #1e373c
-                                        st,
-                                    );
-                                }
-                            }
-
                             // draw texts
                             let sub_rect = egui::Rect::from_min_size(
                                 Pos2::ZERO,
@@ -202,18 +178,45 @@ impl eframe::App for GrovesApp {
                             let pill_painter = painter.with_clip_rect(sub_rect);
                             for row_id in range.clone() {
                                 let row = &pane.rows()[row_id];
+                                let dot_x = calc_x(left + WIDTH_PILL_AREA, 8.0, row.lane);
                                 if let Some(pill) = &row.pill {
                                     let pill_pos = Pos2::new(
                                         calc_x(left, 8.0, 0),
                                         calc_y(top, range_start, row_id),
                                     );
 
-                                    draw_pill(
+                                    let pill_width = draw_pill(
                                         pill,
                                         pill_pos,
                                         &pill_painter,
                                         font.clone(),
                                         lane_color(row.lane),
+                                    );
+                                    draw_pill_connector(
+                                        Pos2::new(pill_pos.x + pill_width, pill_pos.y),
+                                        dot_x - 2.0,
+                                        &painter,
+                                        lane_color(row.lane),
+                                    );
+                                }
+
+                                let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
+
+                                let y = calc_y(top, range_start, row_id);
+
+                                if pane.rows()[row_id].is_merge {
+                                    painter.circle(
+                                        Pos2::new(dot_x, y),
+                                        2.0,
+                                        lane_color(row.lane),
+                                        st,
+                                    );
+                                } else {
+                                    painter.circle(
+                                        Pos2::new(dot_x, y),
+                                        3.5,
+                                        Color32::from_rgb(0x1E, 0x37, 0x3C), // #1e373c
+                                        st,
                                     );
                                 }
 
