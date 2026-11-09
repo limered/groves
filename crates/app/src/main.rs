@@ -5,7 +5,7 @@ use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
-use groves_app::colors::lane_color;
+use groves_app::colors::{lane_color, BACKGROUND_COLOR};
 use groves_app::render::{draw_pill, draw_pill_connector, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
@@ -39,8 +39,7 @@ impl eframe::App for GrovesApp {
                                 Vec2::new(full.width(), row_range.len() as f32 * row_height),
                                 Sense::click(),
                             );
-                            let bg_col = Color32::from_hex("#38232f").unwrap();
-                            painter.rect_filled(resp.rect, 0.0, bg_col);
+                            painter.rect_filled(resp.rect, 0.0, BACKGROUND_COLOR);
 
                             let top = resp.rect.top();
                             let left = resp.rect.left();

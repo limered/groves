@@ -1,3 +1,6 @@
+// Palette: https://lospec.com/palette-list/meadowvale
+// and: https://lospec.com/palette-list/the-jungle
+
 use egui::Color32;
 
 static BRANCH_COLORS: [Color32; 12] = [
@@ -14,6 +17,8 @@ static BRANCH_COLORS: [Color32; 12] = [
     Color32::from_rgb(0x4e, 0x62, 0x82),
     Color32::from_rgb(0x7f, 0xb5, 0xc0),
 ];
+
+pub static BACKGROUND_COLOR: Color32 = Color32::from_rgb(0x21, 0x1f, 0x21);
 
 pub fn lane_color(lane: usize) -> Color32 {
     BRANCH_COLORS[lane % BRANCH_COLORS.len()]

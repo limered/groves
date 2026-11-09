@@ -106,7 +106,7 @@ impl Pane {
         &self.edges
     }
     pub fn lane_count(&self) -> usize {
-        self.lane_count
+        self.lane_count + 1
     }
     pub fn graph_width_px(&self) -> f32 {
         self.lane_count() as f32 * LANE_WIDTH_PX
