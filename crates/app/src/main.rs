@@ -5,12 +5,11 @@ use std::path::Path;
 
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, Color32, FontId, Pos2, Stroke};
-use groves_app::colors::{lane_color, BACKGROUND_COLOR};
+use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
 use groves_app::render::{draw_pill, draw_pill_connector, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 
-const FG: Color32 = Color32::from_rgb(0xC0, 0xDA, 0xDE); //#c0dade
 const WIDTH_PILL_AREA: f32 = 150.0;
 
 struct GrovesApp {
@@ -231,7 +230,7 @@ impl eframe::App for GrovesApp {
                                     Align2::LEFT_CENTER,
                                     &row.short,
                                     font.clone(),
-                                    FG,
+                                    FONT_COLOR,
                                 );
                                 painter.text(
                                     Pos2::new(
@@ -245,7 +244,7 @@ impl eframe::App for GrovesApp {
                                     Align2::LEFT_CENTER,
                                     row.title.clone(),
                                     font.clone(),
-                                    FG,
+                                    FONT_COLOR,
                                 );
                             }
                         },

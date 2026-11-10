@@ -19,6 +19,7 @@ static BRANCH_COLORS: [Color32; 12] = [
 ];
 
 pub static BACKGROUND_COLOR: Color32 = Color32::from_rgb(0x21, 0x1f, 0x21);
+pub const FONT_COLOR: Color32 = Color32::from_rgb(0xC0, 0xDA, 0xDE); //#c0dade
 
 pub fn lane_color(lane: usize) -> Color32 {
     BRANCH_COLORS[lane % BRANCH_COLORS.len()]
