@@ -57,12 +57,16 @@ pub fn draw_pill(
         branch_text = format!("{0}|+{1}", branch_text, pill.plus_count);
     }
 
+    if pill.style == PillStyle::Synced {
+        branch_text = format!("{} ⇅", branch_text);
+    }
+
     let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
     if pill.style == PillStyle::Outline {
         text_col = pill_col;
     }
 
-    let galley = painter.layout_no_wrap(branch_text.to_string(), font.clone(), text_col);
+    let galley = painter.layout_no_wrap(branch_text.to_string(), font, text_col);
 
     let mut size = galley.size() + padding * 2.0;
     size.x = size.x.max(size.y);
@@ -77,10 +81,6 @@ pub fn draw_pill(
         let stroke_kind = StrokeKind::Middle;
         painter.rect_stroke(rect, radius, stroke, stroke_kind);
     }
-
-    // if pill.style == PillStyle::Synced {
-    //
-    // }
 
     let text_pos = rect.center() - galley.size() / 2.0;
     painter.galley(text_pos, galley, text_col);

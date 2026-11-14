@@ -43,6 +43,7 @@ impl eframe::App for GrovesApp {
                             let left = resp.rect.left();
 
                             let font = FontId::monospace(13.0);
+                            let pill_font = FontId::monospace(14.0);
 
                             // edges
                             let range_start = row_range.start;
@@ -91,7 +92,7 @@ impl eframe::App for GrovesApp {
                                         pill,
                                         pill_pos,
                                         &pill_painter,
-                                        font.clone(),
+                                        pill_font.clone(),
                                         lane_color(row.lane),
                                     );
                                     draw_pill_connector(
