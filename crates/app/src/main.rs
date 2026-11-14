@@ -1,14 +1,13 @@
 // Emil owns this file — ticket 01 will add the eframe app that opens a repo
 // path from the CLI args and lists its commits (or shows the open error).
 
-use std::path::Path;
-
 use eframe::egui::{Sense, Vec2};
-use egui::{Align2, Color32, FontId, Pos2, Stroke};
+use egui::{Align2, FontId, Pos2, Stroke};
 use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
-use groves_app::render::{draw_pill, draw_pill_connector, route_edge};
+use groves_app::render::{draw_dots, draw_pill, draw_pill_connector, render_edges, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
+use std::path::Path;
 
 const WIDTH_PILL_AREA: f32 = 150.0;
 
@@ -53,11 +52,6 @@ impl eframe::App for GrovesApp {
                                 {
                                     continue;
                                 }
-                                let col_this = lane_color(edge.parent_lane);
-                                let st_this = Stroke::new(2.0, col_this);
-
-                                let col_other = lane_color(edge.child_lane);
-                                let st_other = Stroke::new(2.0, col_other);
 
                                 let points = route_edge(edge);
                                 for point_index in 1..points.len() {
@@ -69,102 +63,12 @@ impl eframe::App for GrovesApp {
                                     let start_x = calc_x(left + WIDTH_PILL_AREA, 8.0, last_lane);
                                     let end_x = calc_x(left + WIDTH_PILL_AREA, 8.0, lane);
 
-                                    let dir = if edge.parent_lane > edge.child_lane {
-                                        -1.0
-                                    } else {
-                                        1.0
-                                    };
-
-                                    if edge.parent_lane == edge.child_lane {
-                                        painter.line_segment(
-                                            [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
-                                            st_this,
-                                        );
-                                    } else if start_x == end_x {
-                                        painter.line_segment(
-                                            [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
-                                            if edge.is_first_parent {
-                                                st_other
-                                            } else {
-                                                st_this
-                                            },
-                                        );
-                                    } else if edge.is_first_parent {
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(start_x, end_y - 1.0 * ROW_HEIGHT_PX),
-                                                Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                            ],
-                                            st_other,
-                                        );
-                                        painter.add(
-                                            egui::epaint::CubicBezierShape::from_points_stroke(
-                                                [
-                                                    Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                                    Pos2::new(start_x, end_y - 0.2 * ROW_HEIGHT_PX),
-                                                    Pos2::new(
-                                                        start_x - 0.2 * dir * LANE_WIDTH_PX,
-                                                        end_y,
-                                                    ),
-                                                    Pos2::new(
-                                                        start_x - 0.5 * dir * LANE_WIDTH_PX,
-                                                        end_y,
-                                                    ),
-                                                ],
-                                                false,
-                                                Color32::TRANSPARENT,
-                                                st_other,
-                                            ),
-                                        );
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(
-                                                    start_x - 0.5 * dir * LANE_WIDTH_PX,
-                                                    end_y,
-                                                ),
-                                                Pos2::new(end_x, end_y),
-                                            ],
-                                            st_other,
-                                        );
-                                    } else {
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(start_x, start_y),
-                                                Pos2::new(
-                                                    end_x + 0.5 * dir * LANE_WIDTH_PX,
-                                                    start_y,
-                                                ),
-                                            ],
-                                            st_this,
-                                        );
-                                        painter.add(
-                                            egui::epaint::CubicBezierShape::from_points_stroke(
-                                                [
-                                                    Pos2::new(
-                                                        end_x + 0.5 * dir * LANE_WIDTH_PX,
-                                                        start_y,
-                                                    ),
-                                                    Pos2::new(
-                                                        end_x - 0.1 * dir * LANE_WIDTH_PX,
-                                                        start_y,
-                                                    ),
-                                                    Pos2::new(end_x, end_y - 0.4 * ROW_HEIGHT_PX),
-                                                    Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                                ],
-                                                false,
-                                                Color32::TRANSPARENT,
-                                                st_this,
-                                            ),
-                                        );
-
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                                Pos2::new(end_x, end_y + 0.5 * ROW_HEIGHT_PX),
-                                            ],
-                                            st_this,
-                                        );
-                                    }
+                                    render_edges(
+                                        edge,
+                                        Pos2::new(start_x, start_y),
+                                        Pos2::new(end_x, end_y),
+                                        &painter,
+                                    );
                                 }
                             }
 
@@ -198,25 +102,10 @@ impl eframe::App for GrovesApp {
                                     );
                                 }
 
+                                // draw dots
                                 let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
-
                                 let y = calc_y(top, range_start, row_id);
-
-                                if pane.rows()[row_id].is_merge {
-                                    painter.circle(
-                                        Pos2::new(dot_x, y),
-                                        2.0,
-                                        lane_color(row.lane),
-                                        st,
-                                    );
-                                } else {
-                                    painter.circle(
-                                        Pos2::new(dot_x, y),
-                                        3.5,
-                                        Color32::from_rgb(0x1E, 0x37, 0x3C), // #1e373c
-                                        st,
-                                    );
-                                }
+                                draw_dots(row, Pos2::new(dot_x, y), st, &painter);
 
                                 painter.text(
                                     Pos2::new(

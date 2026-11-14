@@ -3,9 +3,10 @@
 //! Ticket 03b: `route_edge` — turning a pane edge span into per-row-gap
 //! waypoints — goes here in this module.
 
+use crate::colors::lane_color;
 use eframe::epaint::Stroke;
 use egui::{Color32, FontId, Painter, Pos2, StrokeKind, vec2};
-use groves_core::{Edge, Pill, PillStyle, ROW_HEIGHT_PX};
+use groves_core::{Edge, LANE_WIDTH_PX, Pill, PillStyle, ROW_HEIGHT_PX, Row};
 
 pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
     if edge.parent_lane == edge.child_lane {
@@ -89,4 +90,97 @@ pub fn draw_pill(
 pub fn draw_pill_connector(pos: Pos2, dot_x: f32, painter: &Painter, color: Color32) {
     let st = Stroke::new(0.5, color);
     painter.line_segment([pos, Pos2::new(dot_x, pos.y)], st);
+}
+
+pub fn draw_dots(row: &Row, dot_pos: Pos2, st: Stroke, painter: &Painter) {
+    let color = if row.is_merge {
+        lane_color(row.lane)
+    } else {
+        Color32::from_rgb(0x1E, 0x37, 0x3C)
+    }; // #1e373c
+    let radius = if row.is_merge { 2.0 } else { 3.5 };
+    painter.circle(dot_pos, radius, color, st);
+}
+
+pub fn render_edges(edge: &Edge, start: Pos2, end: Pos2, painter: &Painter) {
+    let col_this = lane_color(edge.parent_lane);
+    let st_this = Stroke::new(2.0, col_this);
+
+    let col_other = lane_color(edge.child_lane);
+    let st_other = Stroke::new(2.0, col_other);
+
+    let dir = if edge.parent_lane > edge.child_lane {
+        -1.0
+    } else {
+        1.0
+    };
+
+    if edge.parent_lane == edge.child_lane {
+        painter.line_segment(
+            [Pos2::new(start.x, start.y), Pos2::new(end.x, end.y)],
+            st_this,
+        );
+    } else if start.x == end.x {
+        painter.line_segment(
+            [Pos2::new(start.x, start.y), Pos2::new(end.x, end.y)],
+            if edge.is_first_parent {
+                st_other
+            } else {
+                st_this
+            },
+        );
+    } else if edge.is_first_parent {
+        painter.line_segment(
+            [
+                Pos2::new(start.x, end.y - 1.0 * ROW_HEIGHT_PX),
+                Pos2::new(start.x, end.y - 0.5 * ROW_HEIGHT_PX),
+            ],
+            st_other,
+        );
+        painter.add(egui::epaint::CubicBezierShape::from_points_stroke(
+            [
+                Pos2::new(start.x, end.y - 0.5 * ROW_HEIGHT_PX),
+                Pos2::new(start.x, end.y - 0.2 * ROW_HEIGHT_PX),
+                Pos2::new(start.x - 0.2 * dir * LANE_WIDTH_PX, end.y),
+                Pos2::new(start.x - 0.5 * dir * LANE_WIDTH_PX, end.y),
+            ],
+            false,
+            Color32::TRANSPARENT,
+            st_other,
+        ));
+        painter.line_segment(
+            [
+                Pos2::new(start.x - 0.5 * dir * LANE_WIDTH_PX, end.y),
+                Pos2::new(end.x, end.y),
+            ],
+            st_other,
+        );
+    } else {
+        painter.line_segment(
+            [
+                Pos2::new(start.x, start.y),
+                Pos2::new(end.x + 0.5 * dir * LANE_WIDTH_PX, start.y),
+            ],
+            st_this,
+        );
+        painter.add(egui::epaint::CubicBezierShape::from_points_stroke(
+            [
+                Pos2::new(end.x + 0.5 * dir * LANE_WIDTH_PX, start.y),
+                Pos2::new(end.x - 0.1 * dir * LANE_WIDTH_PX, start.y),
+                Pos2::new(end.x, end.y - 0.4 * ROW_HEIGHT_PX),
+                Pos2::new(end.x, end.y - 0.5 * ROW_HEIGHT_PX),
+            ],
+            false,
+            Color32::TRANSPARENT,
+            st_this,
+        ));
+
+        painter.line_segment(
+            [
+                Pos2::new(end.x, end.y - 0.5 * ROW_HEIGHT_PX),
+                Pos2::new(end.x, end.y + 0.5 * ROW_HEIGHT_PX),
+            ],
+            st_this,
+        );
+    }
 }
