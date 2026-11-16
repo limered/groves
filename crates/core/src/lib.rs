@@ -192,7 +192,7 @@ impl Pane {
         }
     }
 
-    fn build_pill(commit_refs: &mut [GitRef]) -> Option<Pill> {
+    fn build_pill(commit_refs: &[GitRef]) -> Option<Pill> {
         let mut pill: Option<Pill> = None;
         if !commit_refs.is_empty() {
             // sort name first, then by kind
@@ -201,15 +201,14 @@ impl Pane {
                 .filter(|r| {
                     r.kind == RefKind::Local || matches!(r.kind, RefKind::Remote { remote: _ })
                 })
-                .filter(|r| !r.name.eq("origin/HEAD"))
+                .filter(|r| !r.name.ends_with("/HEAD"))
                 .collect();
 
             if filtered.is_empty() {
                 return None;
             }
 
-            filtered.sort_by_key(|r| r.name.clone());
-            filtered.sort_by_key(|r| r.kind.clone());
+            filtered.sort_by_key(|r| (r.kind.clone(), r.name.clone()));
 
             // derive style
             let visible_ref = filtered[0];
@@ -218,12 +217,16 @@ impl Pane {
             } else {
                 PillStyle::Outline
             };
+
             if let Some(upstream) = &visible_ref.upstream
-                && filtered.iter().find(|r| r.name.eq(upstream)).is_some()
+                && let Some(upstream_id) = filtered
+                .iter()
+                .position(|r| r.name.eq(upstream))
             {
                 style = PillStyle::Synced;
-                filtered.remove(filtered.iter().position(|r| r.name.eq(upstream))?);
+                filtered.remove(upstream_id);
             }
+
 
             let plus_count = filtered.len().saturating_sub(1);
             pill = Some(Pill {
