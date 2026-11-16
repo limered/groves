@@ -2,6 +2,11 @@
 
 User-facing changes per release. Each section is written by the `release` skill and also serves as the text of the GitHub Release.
 
+## [0.4.1] - 2026-11-16
+
+### Fixed
+- Launching groves with no arguments now opens the repository at the current working directory, so the .exe can be started by double-clicking it instead of from the command line.
+
 ## [0.4.0] - 2026-11-16
 
 ### Added
