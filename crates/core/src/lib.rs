@@ -31,7 +31,6 @@ pub struct Commit {
     pub parents: Vec<String>,
     pub time: i64,
     pub title: String,
-    pub refs: Vec<String>,
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
@@ -64,6 +63,11 @@ impl RefSnapshot {
         &self.refs
     }
 }
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct HeadMarker {
+    pub name: String,
+    pub is_main: bool,
+}
 
 #[derive(Clone, Debug)]
 pub struct Row {
@@ -73,6 +77,7 @@ pub struct Row {
     pub lane: usize,
     pub is_merge: bool,
     pub pill: Option<Pill>,
+    pub head_markers: Vec<HeadMarker>,
 }
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Edge {
@@ -97,6 +102,10 @@ impl Pane {
             rows: Vec::new(),
             edges: Vec::new(),
         }
+    }
+
+    pub fn head_jump_rows(&self) -> Vec<i32> {
+        Vec::new()
     }
 
     pub fn rows(&self) -> &[Row] {
@@ -145,6 +154,7 @@ impl Pane {
                 .or_default()
                 .push(r.clone());
         }
+        
         let mut lane_count = 0;
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
@@ -180,6 +190,7 @@ impl Pane {
                     lane: lanes[*index],
                     is_merge: c.parents.len() > 1,
                     pill,
+                    head_markers: Vec::new(),
                 });
                 lane_count = lane_count.max(lanes[*index] + 1);
             }
