@@ -149,8 +149,10 @@ impl Pane {
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
                 let c = &filtered_commits[*index];
-                let commit_refs = commit_to_ref.entry(c.id.clone()).or_default();
-                let pill: Option<Pill> = Self::build_pill(commit_refs);
+                let mut pill: Option<Pill> = None;
+                if let Some(commit_refs) = commit_to_ref.get(&c.id) {
+                    pill = Self::build_pill(commit_refs);
+                }
 
                 for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {
