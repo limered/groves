@@ -216,3 +216,17 @@ fn graph_column_is_lanes_wide_and_never_overlaps_text() {
     // width so text can never sit under the graph.
     assert!(merged.graph_width_px() > line.graph_width_px());
 }
+
+#[test]
+fn an_empty_pane_has_zero_lanes() {
+    // `Pane::empty()` is what load() returns when the snapshot has no HEAD —
+    // a pane with no rows must not pretend to be one lane wide.
+    assert_eq!(Pane::empty().lane_count(), 0);
+    assert_eq!(Pane::empty().graph_width_px(), 0.0);
+
+    let source = SyntheticSource::for_graph_with_refs(vec![], vec![]);
+    let pane = Pane::load(&source);
+    assert_eq!(pane.rows().len(), 0);
+    assert_eq!(pane.lane_count(), 0);
+    assert_eq!(pane.graph_width_px(), 0.0);
+}

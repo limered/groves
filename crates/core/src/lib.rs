@@ -106,7 +106,7 @@ impl Pane {
         &self.edges
     }
     pub fn lane_count(&self) -> usize {
-        self.lane_count + 1
+        self.lane_count
     }
     pub fn graph_width_px(&self) -> f32 {
         self.lane_count() as f32 * LANE_WIDTH_PX
@@ -179,7 +179,7 @@ impl Pane {
                     is_merge: c.parents.len() > 1,
                     pill,
                 });
-                lane_count = lane_count.max(lanes[*index]);
+                lane_count = lane_count.max(lanes[*index] + 1);
             }
         }
 
