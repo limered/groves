@@ -2,6 +2,12 @@
 
 User-facing changes per release. Each section is written by the `release` skill and also serves as the text of the GitHub Release.
 
+## [0.4.0] - 2026-11-16
+
+### Added
+- Branch pills: rows with branches show their branch name in a fixed column left of the graph — filled for local branches, outlined for remotes, one synced pill (⇅) when a branch and its upstream point at the same commit, `+N` for further refs, and a thin connector to the row's dot. (04)
+- Lane colours: graph lines, dots and pills are now drawn in per-lane colours from a woody palette, so neighbouring branch lines can be told apart at a glance. (04)
+
 ## [0.3.1] - 2026-11-03
 
 ### Fixed
