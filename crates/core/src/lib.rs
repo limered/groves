@@ -219,14 +219,11 @@ impl Pane {
             };
 
             if let Some(upstream) = &visible_ref.upstream
-                && let Some(upstream_id) = filtered
-                .iter()
-                .position(|r| r.name.eq(upstream))
+                && let Some(upstream_id) = filtered.iter().position(|r| r.name.eq(upstream))
             {
                 style = PillStyle::Synced;
                 filtered.remove(upstream_id);
             }
-
 
             let plus_count = filtered.len().saturating_sub(1);
             pill = Some(Pill {

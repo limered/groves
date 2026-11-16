@@ -57,7 +57,7 @@ Compiler errors are the best lesson material. Help Emil read the error first (wh
 
 Baseline, from his game `limered/4mb` (edition 2018, ggez → macroquad, rapier2d):
 
-- **Knows:** modules in one crate, structs with `impl` blocks, "systems" passed around as `&mut`, rapier handles instead of references, implementing a library trait (`EventHandler`), `Option`/`if let`, an immediate-mode frame loop with a fixed timestep.
+- **Knows:** modules in one crate, structs with `impl` blocks, "systems" passed around as `&mut`, rapier handles instead of references, implementing a library trait (`EventHandler`), `Option`/`if let`, an immediate-mode frame loop with a fixed timestep. After 03/03b/04: edition-2024 let-chains, `filter`/`map`/`collect` chains, enums with data, `HashSet`, `Option`-in-Vec slot patterns, derived `Ord` as contract + tuple `sort_by_key`, byte-vs-char strings (`chars().take()` truncation), cached derived fields and their drift hazards, `entry()` vs `get()`, egui galley measurement (`layout_no_wrap`), painter clip rects (screen-space), bezier edge painters.
 - **New to him:** edition 2024, cargo workspaces, defining his own traits and generics, error types (`thiserror`, `?` across crates), writing tests, lifetimes, closures and iterator chains at depth, threads/channels/`Arc`/`Send`/`Sync`, serde, `std::process`.
 
 Build bridges from what he knows. The DAG uses rapier-style handles (`u32` indices into parallel `Vec`s). egui is immediate-mode like macroquad. The scheduler is a game loop with timers. Update this section when a ticket's `## Learned` note shows something has landed, so later hints can assume it.

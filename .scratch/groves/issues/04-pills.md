@@ -6,14 +6,14 @@
 
 **Blocked by:** 03
 
-**Status:** in-progress
+**Status:** done
 
 **Rust focus:** implementing `Ord` and sorting by key, `match` with guards, borrowing `&str` from owned data (your first real lifetimes), colour tables.
 
-- [ ] Pill choice follows HEAD branch > local > remote (tests via `core::Pane`)
-- [ ] Local + upstream on the same commit collapse into one synced pill
-- [ ] `+N` counts the remaining branch refs (tags excluded)
-- [ ] Manual: filled vs outline is clearly readable, colours match the lanes
+- [x] Pill choice follows HEAD branch > local > remote (tests via `core::Pane`)
+- [x] Local + upstream on the same commit collapse into one synced pill
+- [x] `+N` counts the remaining branch refs (tags excluded)
+- [x] Manual: filled vs outline is clearly readable, colours match the lanes
 
 ## Decisions (mentor, recorded at red)
 
@@ -36,14 +36,23 @@
 ## Decision: pill zone (agreed with Emil, flipped twice)
 
 - ~~Pills render right of the graph, in-flow (prototype + GitHub-commits behaviour).~~ **Changed 2026-11-04 during ticket 04**, after testing against the bm factory repo: with ~17 dense lanes, in-flow pushes pills to the pane edge and long names (`Brickmakers.AIFactory.AgentPlugins/…`) run off; the recorded revisit trigger ("long pills fighting text/hover") fired early — same failure shape, just via lane count instead of ticket 20.
-- **Now: GitKraken-style left column.** Fixed zone left of the graph, constant width (`WIDTH_PILL_AREA` 150 px), names abbreviated GitKraken-style (`origin/main` → `O/main`, locals too), cap ≈ 12 chars. Ellipsis on truncation: *pending from review 2026-11-15* (current cut is silent). **Connector from pill to dot: adopted** during 04 (commit 955bc99, thin 0.5 stroke) — reverses the "no connector" note after trying it; the pill-to-commit link won. Ticket 05 draws its markers into the same left zone.
+- **Now: GitKraken-style left column.** Fixed zone left of the graph, constant width (`WIDTH_PILL_AREA` 150 px), names abbreviated GitKraken-style (`origin/main` → `O/main`, locals too), cap ≈ 12 chars with ellipsis (landed in 75e48c8). **Connector from pill to dot: adopted** during 04 (commit 955bc99, thin 0.5 stroke) — reverses the "no connector" note after trying it; the pill-to-commit link won. Ticket 05 draws its markers into the same left zone.
 - Reasons against per-row in-flow re-confirmed: ragged pill x per row, jitter while scrolling, no natural cap.
 - Scope: affects UI render + manual checks only; pill *choice* (core::Pane) is placement-agnostic, red tests unchanged. Ticket 05 (worktree HEAD markers) draws its markers into the same left zone.
 - Zone width is a constant, not "widest pill in view" — no reflow while scrolling. Tune the number later if it wastes space on sparse repos.
 
 ## Manual checks
 
-- [ ] `cargo run -p groves-app -- <branchy-repo>` (try a dense one like the bm factory repo): decorated rows show one pill in the fixed left column at a stable x; undecorated rows show nothing in the zone; long names ellipsis at the cap and don't push anything around.
-- [ ] On a synced tip (e.g. `main` and `origin/main` on the same commit) exactly one pill shows.
-- [ ] Filled (local) vs outlined (remote) readable at a glance; the pill colour matches that row's lane colour.
-- [ ] A pushed-but-unmerged branch shows an outlined pill on its tip commit.
+- [x] `cargo run -p groves-app -- <branchy-repo>` (try a dense one like the bm factory repo): decorated rows show one pill in the fixed left column at a stable x; undecorated rows show nothing in the zone; long names ellipsis at the cap and don't push anything around.
+- [x] On a synced tip (e.g. `main` and `origin/main` on the same commit) exactly one pill shows.
+- [x] Filled (local) vs outlined (remote) readable at a glance; the pill colour matches that row's lane colour.
+- [x] A pushed-but-unmerged branch shows an outlined pill on its tip commit.
+
+## Learned
+
+- Strings slice by **bytes**, not chars: `text[0..12]` panics on a multi-byte char at the boundary — truncate with `chars().take(n)`, guard with `chars().count()`. And a derived-`Ord` enum's variant order becomes a contract: `RefKind`'s order now *is* the pill tier order.
+- Derived state stored on a struct (`lane_count`) must be computed by one expression, or it drifts — the count-vs-index off-by-one survived two green suites until the workspace gate caught it. `entry().or_default()` inserts even when you only meant to look: `.get()` for read paths.
+
+## Review record
+
+- Gate at close: `cargo test --workspace` green (32 tests incl. the review's empty-pane regression test), clippy clean. **`cargo fmt --check` still red at close** — two rustfmt nits in `build_pill` (let-chain join + blank line); Emil runs `cargo fmt` and re-checks before the next commit.
