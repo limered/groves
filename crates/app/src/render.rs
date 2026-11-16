@@ -39,8 +39,7 @@ pub fn draw_pill(
     let padding = vec2(8.0, 2.0);
 
     let pill_text_parts: Vec<&str> = pill.name.split('/').collect();
-    let mut branch_text =
-        pill_text_parts[pill_text_parts.len().saturating_sub(1)..pill_text_parts.len()].join("/");
+    let mut branch_text = pill_text_parts.last().unwrap().to_string();
     if pill_text_parts.len() > 1 {
         let branch_type = pill_text_parts[pill_text_parts.len().saturating_sub(2)]
             .char_indices()
