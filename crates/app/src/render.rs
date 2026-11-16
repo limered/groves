@@ -49,8 +49,9 @@ pub fn draw_pill(
         branch_text = format!("{0}/{1}", branch_type.1.to_uppercase(), branch_text);
     }
 
-    if branch_text.len() > 12 {
-        branch_text = branch_text[0..12].to_string();
+    if branch_text.chars().count() > 12 {
+        branch_text = branch_text.chars().take(12).collect::<String>();
+        branch_text = format!("{}…", branch_text);
     }
 
     if pill.plus_count > 0 {
@@ -58,7 +59,7 @@ pub fn draw_pill(
     }
 
     if pill.style == PillStyle::Synced {
-        branch_text = format!("{} ⇅", branch_text);
+        branch_text = format!("⇅{}", branch_text);
     }
 
     let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
