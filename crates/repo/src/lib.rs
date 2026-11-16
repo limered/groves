@@ -45,26 +45,55 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
     let mut walk_refs: Vec<GitRef> = Vec::new();
     let mut ref_commits: Vec<gix::ObjectId> = Vec::new();
 
-    let worktrees = repo
-        .worktrees_including_main()
-        .map_err(RepoError::WorktreesMissing)?;
-    for worktree in worktrees {
-        let Ok(wkt) = worktree else {
+    let main_repo = repo.main_repo().map_err(RepoError::NotARepository)?;
+    let main_repo_name = main_repo
+        .workdir()
+        .unwrap_or_else(|| main_repo.git_dir())
+        .file_name()
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_string();
+
+    let mut head = main_repo.head().unwrap();
+    let head_target = head.peel_to_commit().unwrap();
+    let time = head_target.time().unwrap();
+    let upstream_ref = resolve_upstream_ref(&repo, head.name());
+
+    walk_refs.push(GitRef {
+        name: main_repo_name,
+        target: head_target.id.to_string(),
+        kind: RefKind::WorktreeHead,
+        tip_time: time.seconds,
+        upstream: upstream_ref,
+    });
+    ref_commits.push(head_target.id);
+
+    let worktree_proxies = repo.worktrees().map_err(RepoError::WorktreesMissing)?;
+    for proxy in worktree_proxies {
+        let mut name = proxy.id().unwrap().to_string();
+        let Ok(wkt_repo) = proxy.into_repo_with_possibly_inaccessible_worktree() else {
             continue;
         };
-        let Ok(mut head) = wkt.head() else { continue };
+
+        let Ok(mut head) = wkt_repo.head() else {
+            continue;
+        };
         let Ok(target) = head.peel_to_commit() else {
             continue;
         };
-        let Some(wkt_ref_name) = head.referent_name() else {
-            continue;
-        };
+
+        let mut upstream_ref : Option<String> = None;
+        let wkt_ref = head.referent_name();
+        if let Some(wkt_ref_name) = wkt_ref{
+            upstream_ref = resolve_upstream_ref(&repo, wkt_ref_name);
+        }else {
+            name = target.short_id().unwrap().to_string();
+        }
+        
         let Ok(time) = target.time() else { continue };
-
-        let upstream_ref = resolve_upstream_ref(&repo, wkt_ref_name);
-
         walk_refs.push(GitRef {
-            name: "HEAD".to_string(),
+            name: name.to_string(),
             target: target.id.to_string(),
             kind: RefKind::WorktreeHead,
             tip_time: time.seconds,
@@ -127,7 +156,6 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
             time: info.commit_time(),
             id: info.id.to_string(),
             title: summary.to_string(),
-            refs: Vec::new(),
         });
     }
 
