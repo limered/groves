@@ -41,7 +41,7 @@ pub enum RefKind {
     WorktreeHead,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct GitRef {
     pub name: String,
     pub target: String,
@@ -129,7 +129,7 @@ impl Pane {
             .ref_snapshot()
             .refs()
             .iter()
-            .find(|r| r.name == "HEAD")
+            .find(|r| r.kind == RefKind::WorktreeHead)
         else {
             return Pane::empty();
         };
@@ -160,8 +160,13 @@ impl Pane {
             if placed[*index] {
                 let c = &filtered_commits[*index];
                 let mut pill: Option<Pill> = None;
+                let mut head_markers: Vec<HeadMarker> = Vec::new();
                 if let Some(commit_refs) = commit_to_ref.get(&c.id) {
                     pill = Self::build_pill(commit_refs);
+                    head_markers = commit_refs.iter()
+                        .filter(|r| r.kind == RefKind::WorktreeHead)
+                        .map(|r| HeadMarker {name: r.name.clone(), is_main: r == head_ref})
+                        .collect();
                 }
 
                 for (parent_index, parent) in c.parents.iter().enumerate() {
@@ -190,7 +195,7 @@ impl Pane {
                     lane: lanes[*index],
                     is_merge: c.parents.len() > 1,
                     pill,
-                    head_markers: Vec::new(),
+                    head_markers,
                 });
                 lane_count = lane_count.max(lanes[*index] + 1);
             }
