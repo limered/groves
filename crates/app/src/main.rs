@@ -155,11 +155,16 @@ fn calc_y(top: f32, range_start: usize, row: usize) -> f32 {
 }
 
 fn main() {
-    let repo_path = std::env::args().nth(1).expect("usage: groves <repo path>");
+    let repo = if std::env::args().len() > 1 {
+        let path_string = std::env::args().nth(1).expect("usage: groves <repo path>");
+        open(Path::new(&path_string))
+    } else {
+        let path = std::env::current_dir().expect("can't access current directory");
+        open(&path)
+    };
 
-    let repo_result = open(Path::new(&repo_path));
     let app = GrovesApp {
-        content: create_app(repo_result),
+        content: create_app(repo),
     };
     let native_options = eframe::NativeOptions::default();
     eframe::run_native("Groves", native_options, Box::new(|_cc| Ok(Box::new(app))))
