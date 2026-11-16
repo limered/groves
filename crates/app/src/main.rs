@@ -73,7 +73,7 @@ impl eframe::App for GrovesApp {
 
                             // draw texts
                             let sub_rect = egui::Rect::from_min_size(
-                                Pos2::ZERO,
+                                resp.rect.min,
                                 Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
                             );
                             let pill_painter = painter.with_clip_rect(sub_rect);
