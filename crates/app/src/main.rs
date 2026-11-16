@@ -18,8 +18,6 @@ struct GrovesApp {
 impl eframe::App for GrovesApp {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            // ui.heading("Groves");
-            // ui.separator();
             match &self.content {
                 Ok(pane) => {
                     let row_height = ROW_HEIGHT_PX;
