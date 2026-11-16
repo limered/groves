@@ -8,8 +8,14 @@ use groves_core::{Commit, CommitSource, GitRef, RefKind, RefSnapshot};
 use std::{
     path::PathBuf,
     process::Command,
+    sync::atomic::{AtomicU64, Ordering},
     time::{SystemTime, UNIX_EPOCH},
 };
+
+/// Test binaries run their tests in parallel threads within one process, so
+/// a pid suffix alone cannot separate two fixture calls — every call gets
+/// its own number on top.
+static FIXTURE_CALL: AtomicU64 = AtomicU64::new(0);
 
 /// A synthetic source that yields exactly the commits it was built with,
 /// newest first. Drives `core::Pane` without touching git.
@@ -45,7 +51,6 @@ impl SyntheticSource {
                 // Descending times keep the old newest-first order temporal.
                 time: (n - i) as i64,
                 title,
-                refs: vec![],
             })
             .collect();
         let ref_snapshot = commits
@@ -65,7 +70,6 @@ impl SyntheticSource {
             ref_snapshot,
         }
     }
-
     /// Three commits with fixed 40-hex-char ids, newest first.
     pub fn three() -> Self {
         Self::new(vec![
@@ -127,7 +131,6 @@ impl SyntheticSource {
                     parents: g.parents,
                     time: g.time,
                     title: g.title,
-                    refs: g.refs,
                 })
                 .collect(),
             ref_snapshot: RefSnapshot::new(refs),
@@ -242,7 +245,8 @@ fn git(dir: &std::path::Path, args: &[&str]) {
 }
 
 fn fresh_dir(name: &str) -> PathBuf {
-    let dir = std::env::temp_dir().join(format!("groves-{name}-{}", std::process::id()));
+    let call = FIXTURE_CALL.fetch_add(1, Ordering::Relaxed);
+    let dir = std::env::temp_dir().join(format!("groves-{name}-{}-{call}", std::process::id()));
     if dir.exists() {
         std::fs::remove_dir_all(&dir).expect("remove stale fixture repo");
     }
