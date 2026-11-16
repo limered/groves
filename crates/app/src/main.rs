@@ -1,15 +1,15 @@
 // Emil owns this file — ticket 01 will add the eframe app that opens a repo
 // path from the CLI args and lists its commits (or shows the open error).
 
-use std::path::Path;
-
 use eframe::egui::{Sense, Vec2};
-use egui::{Align2, Color32, FontId, Pos2, Stroke};
-use groves_app::render::route_edge;
+use egui::{Align2, FontId, Pos2, Stroke};
+use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
+use groves_app::render::{draw_dots, draw_pill, draw_pill_connector, render_edges, route_edge};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
+use std::path::Path;
 
-const FG: Color32 = Color32::from_rgb(0xD8, 0xDC, 0xE3);
+const WIDTH_PILL_AREA: f32 = 150.0;
 
 struct GrovesApp {
     content: Result<Pane, String>,
@@ -18,8 +18,6 @@ struct GrovesApp {
 impl eframe::App for GrovesApp {
     fn ui(&mut self, ui: &mut eframe::egui::Ui, _frame: &mut eframe::Frame) {
         egui::CentralPanel::default().show(ui, |ui| {
-            ui.heading("Groves");
-            ui.separator();
             match &self.content {
                 Ok(pane) => {
                     let row_height = ROW_HEIGHT_PX;
@@ -37,43 +35,16 @@ impl eframe::App for GrovesApp {
                                 Vec2::new(full.width(), row_range.len() as f32 * row_height),
                                 Sense::click(),
                             );
+                            painter.rect_filled(resp.rect, 0.0, BACKGROUND_COLOR);
+
                             let top = resp.rect.top();
                             let left = resp.rect.left();
 
                             let font = FontId::monospace(13.0);
+                            let pill_font = FontId::monospace(14.0);
 
-                            // draw texts
-                            for row_id in range.clone() {
-                                let row = &pane.rows()[row_id];
-                                painter.text(
-                                    Pos2::new(
-                                        calc_x(left, 8.0 + pane.graph_width_px(), 0),
-                                        calc_y(top, range.start, row_id),
-                                    ),
-                                    Align2::LEFT_CENTER,
-                                    &row.short,
-                                    font.clone(),
-                                    FG,
-                                );
-                                painter.text(
-                                    Pos2::new(
-                                        calc_x(
-                                            left,
-                                            8.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
-                                            0,
-                                        ),
-                                        calc_y(top, range.start, row_id),
-                                    ),
-                                    Align2::LEFT_CENTER,
-                                    &row.title,
-                                    font.clone(),
-                                    FG,
-                                );
-                            }
-
-                            // lines
+                            // edges
                             let range_start = row_range.start;
-                            let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
                             for edge in pane.edges().iter() {
                                 if edge.parent_row <= range.start.saturating_sub(1)
                                     || edge.child_row >= row_range.end
@@ -88,120 +59,81 @@ impl eframe::App for GrovesApp {
 
                                     let start_y = calc_y(top, range_start, last_row);
                                     let end_y = calc_y(top, range_start, row);
-                                    let start_x = calc_x(left, 8.0, last_lane);
-                                    let end_x = calc_x(left, 8.0, lane);
+                                    let start_x = calc_x(left + WIDTH_PILL_AREA, 8.0, last_lane);
+                                    let end_x = calc_x(left + WIDTH_PILL_AREA, 8.0, lane);
 
-                                    let dir = if edge.parent_lane > edge.child_lane {
-                                        -1.0
-                                    } else {
-                                        1.0
-                                    };
-
-                                    if start_x == end_x {
-                                        painter.line_segment(
-                                            [Pos2::new(start_x, start_y), Pos2::new(end_x, end_y)],
-                                            st,
-                                        );
-                                    } else if edge.is_first_parent {
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(start_x, end_y - 1.0 * ROW_HEIGHT_PX),
-                                                Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                            ],
-                                            st,
-                                        );
-                                        painter.add(
-                                            egui::epaint::CubicBezierShape::from_points_stroke(
-                                                [
-                                                    Pos2::new(start_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                                    Pos2::new(start_x, end_y - 0.2 * ROW_HEIGHT_PX),
-                                                    Pos2::new(
-                                                        start_x - 0.2 * dir * LANE_WIDTH_PX,
-                                                        end_y,
-                                                    ),
-                                                    Pos2::new(
-                                                        start_x - 0.5 * dir * LANE_WIDTH_PX,
-                                                        end_y,
-                                                    ),
-                                                ],
-                                                false,
-                                                Color32::TRANSPARENT,
-                                                st,
-                                            ),
-                                        );
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(
-                                                    start_x - 0.5 * dir * LANE_WIDTH_PX,
-                                                    end_y,
-                                                ),
-                                                Pos2::new(end_x, end_y),
-                                            ],
-                                            st,
-                                        );
-                                    } else {
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(start_x, start_y),
-                                                Pos2::new(
-                                                    end_x + 0.5 * dir * LANE_WIDTH_PX,
-                                                    start_y,
-                                                ),
-                                            ],
-                                            st,
-                                        );
-                                        painter.add(
-                                            egui::epaint::CubicBezierShape::from_points_stroke(
-                                                [
-                                                    Pos2::new(
-                                                        end_x + 0.5 * dir * LANE_WIDTH_PX,
-                                                        start_y,
-                                                    ),
-                                                    Pos2::new(
-                                                        end_x - 0.1 * dir * LANE_WIDTH_PX,
-                                                        start_y,
-                                                    ),
-                                                    Pos2::new(end_x, end_y - 0.4 * ROW_HEIGHT_PX),
-                                                    Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                                ],
-                                                false,
-                                                Color32::TRANSPARENT,
-                                                st,
-                                            ),
-                                        );
-
-                                        painter.line_segment(
-                                            [
-                                                Pos2::new(end_x, end_y - 0.5 * ROW_HEIGHT_PX),
-                                                Pos2::new(end_x, end_y + 0.5 * ROW_HEIGHT_PX),
-                                            ],
-                                            st,
-                                        );
-                                    }
+                                    render_edges(
+                                        edge,
+                                        Pos2::new(start_x, start_y),
+                                        Pos2::new(end_x, end_y),
+                                        &painter,
+                                    );
                                 }
                             }
 
-                            // draw dots
+                            // draw texts
+                            let sub_rect = egui::Rect::from_min_size(
+                                resp.rect.min,
+                                Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
+                            );
+                            let pill_painter = painter.with_clip_rect(sub_rect);
                             for row_id in range.clone() {
-                                let st = Stroke::new(2.0, Color32::from_rgb(0x4F, 0xC3, 0xF7));
-                                let x = calc_x(left, 8.0, pane.rows()[row_id].lane);
-                                let y = calc_y(top, range_start, row_id);
-
-                                if pane.rows()[row_id].is_merge {
-                                    painter.circle(
-                                        Pos2::new(x, y),
-                                        2.0,
-                                        Color32::from_rgb(0x4F, 0xC3, 0xF7),
-                                        st,
+                                let row = &pane.rows()[row_id];
+                                let dot_x = calc_x(left + WIDTH_PILL_AREA, 8.0, row.lane);
+                                if let Some(pill) = &row.pill {
+                                    let pill_pos = Pos2::new(
+                                        calc_x(left, 8.0, 0),
+                                        calc_y(top, range_start, row_id),
                                     );
-                                } else {
-                                    painter.circle(
-                                        Pos2::new(x, y),
-                                        3.5,
-                                        Color32::from_rgb(0xFF, 0x0, 0x0),
-                                        st,
+
+                                    let pill_width = draw_pill(
+                                        pill,
+                                        pill_pos,
+                                        &pill_painter,
+                                        pill_font.clone(),
+                                        lane_color(row.lane),
+                                    );
+                                    draw_pill_connector(
+                                        Pos2::new(pill_pos.x + pill_width, pill_pos.y),
+                                        dot_x - 2.0,
+                                        &painter,
+                                        lane_color(row.lane),
                                     );
                                 }
+
+                                // draw dots
+                                let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
+                                let y = calc_y(top, range_start, row_id);
+                                draw_dots(row, Pos2::new(dot_x, y), st, &painter);
+
+                                painter.text(
+                                    Pos2::new(
+                                        calc_x(
+                                            left + WIDTH_PILL_AREA,
+                                            16.0 + pane.graph_width_px(),
+                                            0,
+                                        ),
+                                        calc_y(top, range.start, row_id),
+                                    ),
+                                    Align2::LEFT_CENTER,
+                                    &row.short,
+                                    font.clone(),
+                                    FONT_COLOR,
+                                );
+                                painter.text(
+                                    Pos2::new(
+                                        calc_x(
+                                            left + WIDTH_PILL_AREA,
+                                            16.0 + pane.graph_width_px() + 5.0 * LANE_WIDTH_PX,
+                                            0,
+                                        ),
+                                        calc_y(top, range.start, row_id),
+                                    ),
+                                    Align2::LEFT_CENTER,
+                                    row.title.clone(),
+                                    font.clone(),
+                                    FONT_COLOR,
+                                );
                             }
                         },
                     );

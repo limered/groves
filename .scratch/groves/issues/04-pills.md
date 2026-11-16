@@ -6,11 +6,53 @@
 
 **Blocked by:** 03
 
-**Status:** ready-for-agent
+**Status:** done
 
 **Rust focus:** implementing `Ord` and sorting by key, `match` with guards, borrowing `&str` from owned data (your first real lifetimes), colour tables.
 
-- [ ] Pill choice follows HEAD branch > local > remote (tests via `core::Pane`)
-- [ ] Local + upstream on the same commit collapse into one synced pill
-- [ ] `+N` counts the remaining branch refs (tags excluded)
-- [ ] Manual: filled vs outline is clearly readable, colours match the lanes
+- [x] Pill choice follows HEAD branch > local > remote (tests via `core::Pane`)
+- [x] Local + upstream on the same commit collapse into one synced pill
+- [x] `+N` counts the remaining branch refs (tags excluded)
+- [x] Manual: filled vs outline is clearly readable, colours match the lanes
+
+## Decisions (mentor, recorded at red)
+
+- **Decorations come from the full ref snapshot**, not the current ref set: a stale branch whose tip is still visible (history passes through it) keeps its label. Pills stay stable when `s` or filters change the ref set.
+- **`origin/HEAD` is an alias**, never a pill, never in `+N` — otherwise every synced tip carries a pointless `+1`.
+- **Secondary worktree heads** are markers, not pills (ticket 05 draws them); they don't pill or count.
+- **Tags** never pill and never count (spec 26/31).
+- **Ties inside a tier** resolve alphabetically. Several locals on one commit share the tier, so alphabetical covers them too; refined in 05 once the snapshot carries HEAD's referent name.
+- "HEAD's branch" means **the local branch standing on the HEAD commit** (the referent name isn't in the snapshot yet), which beats locals standing elsewhere.
+
+## Decision: colour model (agreed with Emil, 2026-11-05)
+
+- **Palette**: Emil's own pick (woody feel), ~10 entries, contrast-checked on the dark background. A `const` table in `crates/app`'s render module — `core` stays colour-free.
+- **Single source of truth**: one `lane_colour(lane) -> Color32` used by pills, edges and dots, so the manual check "colours match the lanes" holds by construction.
+- **Mapping**: `lane % palette.len()`. Adjacent lanes never share a hue; lane 0 (the trunk) always wears entry 0; wholesale recolouring on re-layout is accepted. Identity colouring (colour follows the branch) is parked in ticket 23 — optional, Emil may pick it up later.
+- **Edges**: one colour per edge — the colour of the lane the edge belongs to; **connectors** (the bend where a line splits off or merges in) get the colour of the new branch, i.e. the line the connector itself carries (Emil's phrasing; the renderer picks from `Edge { child_lane, parent_lane, is_first_parent }`). The manual pass judges whether it reads right.
+- **Dots**: deliberately open — Emil experiments with look during the manual pass (ring vs solid, maybe even author-hashed fills). Not pinned by ticket 04.
+- **Rejected**: colouring lanes/pills by `hash(branch name)` in 04 — collision with the point of lane colour (adjacent lines must differ in dense graphs) and the layout doesn't track branch identity anyway (see ticket 23).
+
+## Decision: pill zone (agreed with Emil, flipped twice)
+
+- ~~Pills render right of the graph, in-flow (prototype + GitHub-commits behaviour).~~ **Changed 2026-11-04 during ticket 04**, after testing against the bm factory repo: with ~17 dense lanes, in-flow pushes pills to the pane edge and long names (`Brickmakers.AIFactory.AgentPlugins/…`) run off; the recorded revisit trigger ("long pills fighting text/hover") fired early — same failure shape, just via lane count instead of ticket 20.
+- **Now: GitKraken-style left column.** Fixed zone left of the graph, constant width (`WIDTH_PILL_AREA` 150 px), names abbreviated GitKraken-style (`origin/main` → `O/main`, locals too), cap ≈ 12 chars with ellipsis (landed in 75e48c8). **Connector from pill to dot: adopted** during 04 (commit 955bc99, thin 0.5 stroke) — reverses the "no connector" note after trying it; the pill-to-commit link won. Ticket 05 draws its markers into the same left zone.
+- Reasons against per-row in-flow re-confirmed: ragged pill x per row, jitter while scrolling, no natural cap.
+- Scope: affects UI render + manual checks only; pill *choice* (core::Pane) is placement-agnostic, red tests unchanged. Ticket 05 (worktree HEAD markers) draws its markers into the same left zone.
+- Zone width is a constant, not "widest pill in view" — no reflow while scrolling. Tune the number later if it wastes space on sparse repos.
+
+## Manual checks
+
+- [x] `cargo run -p groves-app -- <branchy-repo>` (try a dense one like the bm factory repo): decorated rows show one pill in the fixed left column at a stable x; undecorated rows show nothing in the zone; long names ellipsis at the cap and don't push anything around.
+- [x] On a synced tip (e.g. `main` and `origin/main` on the same commit) exactly one pill shows.
+- [x] Filled (local) vs outlined (remote) readable at a glance; the pill colour matches that row's lane colour.
+- [x] A pushed-but-unmerged branch shows an outlined pill on its tip commit.
+
+## Learned
+
+- Strings slice by **bytes**, not chars: `text[0..12]` panics on a multi-byte char at the boundary — truncate with `chars().take(n)`, guard with `chars().count()`. And a derived-`Ord` enum's variant order becomes a contract: `RefKind`'s order now *is* the pill tier order.
+- Derived state stored on a struct (`lane_count`) must be computed by one expression, or it drifts — the count-vs-index off-by-one survived two green suites until the workspace gate caught it. `entry().or_default()` inserts even when you only meant to look: `.get()` for read paths.
+
+## Review record
+
+- Gate at close: `cargo test --workspace` green (32 tests incl. the review's empty-pane regression test), clippy clean. **`cargo fmt --check` still red at close** — two rustfmt nits in `build_pill` (let-chain join + blank line); Emil runs `cargo fmt` and re-checks before the next commit.

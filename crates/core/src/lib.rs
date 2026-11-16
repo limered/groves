@@ -11,6 +11,20 @@ pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
     now - tip_time > stale_after_days * DAY_SECONDS
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct Pill {
+    pub name: String,
+    pub style: PillStyle,
+    pub plus_count: usize,
+}
+
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum PillStyle {
+    Filled,
+    Outline,
+    Synced,
+}
+
 #[derive(Clone, Debug)]
 pub struct Commit {
     pub id: String,
@@ -20,7 +34,7 @@ pub struct Commit {
     pub refs: Vec<String>,
 }
 
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd)]
 pub enum RefKind {
     Local,
     Remote { remote: String },
@@ -58,6 +72,7 @@ pub struct Row {
     pub title: String,
     pub lane: usize,
     pub is_merge: bool,
+    pub pill: Option<Pill>,
 }
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Edge {
@@ -70,6 +85,7 @@ pub struct Edge {
 
 #[derive(Debug)]
 pub struct Pane {
+    lane_count: usize,
     rows: Vec<Row>,
     edges: Vec<Edge>,
 }
@@ -77,6 +93,7 @@ pub struct Pane {
 impl Pane {
     pub fn empty() -> Self {
         Self {
+            lane_count: 0,
             rows: Vec::new(),
             edges: Vec::new(),
         }
@@ -89,10 +106,7 @@ impl Pane {
         &self.edges
     }
     pub fn lane_count(&self) -> usize {
-        match &self.rows.iter().max_by(|a, b| a.lane.cmp(&b.lane)) {
-            None => 0,
-            Some(i) => i.lane + 1,
-        }
+        self.lane_count
     }
     pub fn graph_width_px(&self) -> f32 {
         self.lane_count() as f32 * LANE_WIDTH_PX
@@ -123,16 +137,23 @@ impl Pane {
             &row_ids,
         );
 
+        let mut commit_to_ref: HashMap<String, Vec<GitRef>> = HashMap::new();
+        for r in all_refs {
+            let t = r.target.clone();
+            commit_to_ref
+                .entry(t.clone().to_owned())
+                .or_default()
+                .push(r.clone());
+        }
+        let mut lane_count = 0;
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
                 let c = &filtered_commits[*index];
-                rows.push(Row {
-                    id: c.id.clone(),
-                    short: c.id.get(..7).unwrap_or(&c.id).to_string(),
-                    title: c.title.clone(),
-                    lane: lanes[*index],
-                    is_merge: c.parents.len() > 1,
-                });
+                let mut pill: Option<Pill> = None;
+                if let Some(commit_refs) = commit_to_ref.get(&c.id) {
+                    pill = Self::build_pill(commit_refs);
+                }
+
                 for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {
                         continue;
@@ -152,10 +173,66 @@ impl Pane {
                     };
                     edges.push(edge);
                 }
+                rows.push(Row {
+                    id: c.id.clone(),
+                    short: c.id.get(..7).unwrap_or(&c.id).to_string(),
+                    title: c.title.clone(),
+                    lane: lanes[*index],
+                    is_merge: c.parents.len() > 1,
+                    pill,
+                });
+                lane_count = lane_count.max(lanes[*index] + 1);
             }
         }
 
-        Pane { rows, edges }
+        Pane {
+            lane_count,
+            rows,
+            edges,
+        }
+    }
+
+    fn build_pill(commit_refs: &[GitRef]) -> Option<Pill> {
+        let mut pill: Option<Pill> = None;
+        if !commit_refs.is_empty() {
+            // sort name first, then by kind
+            let mut filtered: Vec<&GitRef> = commit_refs
+                .iter()
+                .filter(|r| {
+                    r.kind == RefKind::Local || matches!(r.kind, RefKind::Remote { remote: _ })
+                })
+                .filter(|r| !r.name.ends_with("/HEAD"))
+                .collect();
+
+            if filtered.is_empty() {
+                return None;
+            }
+
+            filtered.sort_by_key(|r| (r.kind.clone(), r.name.clone()));
+
+            // derive style
+            let visible_ref = filtered[0];
+            let mut style = if visible_ref.kind == RefKind::Local {
+                PillStyle::Filled
+            } else {
+                PillStyle::Outline
+            };
+
+            if let Some(upstream) = &visible_ref.upstream
+                && let Some(upstream_id) = filtered.iter().position(|r| r.name.eq(upstream))
+            {
+                style = PillStyle::Synced;
+                filtered.remove(upstream_id);
+            }
+
+            let plus_count = filtered.len().saturating_sub(1);
+            pill = Some(Pill {
+                name: visible_ref.name.clone(),
+                plus_count,
+                style,
+            });
+        }
+        pill
     }
 
     fn calculate_lane_ids(

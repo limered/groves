@@ -1,0 +1,26 @@
+// Palette: https://lospec.com/palette-list/meadowvale
+// and: https://lospec.com/palette-list/the-jungle
+
+use egui::Color32;
+
+static BRANCH_COLORS: [Color32; 12] = [
+    Color32::from_rgb(0xc0, 0xda, 0xde), // #c0dade
+    Color32::from_rgb(0x86, 0x80, 0x89),
+    Color32::from_rgb(0x92, 0x43, 0x51),
+    Color32::from_rgb(0xbc, 0x7e, 0x7e),
+    Color32::from_rgb(0xf5, 0xf6, 0xb8),
+    Color32::from_rgb(0xe9, 0xBD, 0x8E),
+    Color32::from_rgb(0xc7, 0x87, 0x49),
+    Color32::from_rgb(0xa3, 0x60, 0x43),
+    Color32::from_rgb(0xac, 0xc7, 0x65),
+    Color32::from_rgb(0x5c, 0x78, 0x55),
+    Color32::from_rgb(0x4e, 0x62, 0x82),
+    Color32::from_rgb(0x7f, 0xb5, 0xc0),
+];
+
+pub static BACKGROUND_COLOR: Color32 = Color32::from_rgb(0x21, 0x1f, 0x21);
+pub const FONT_COLOR: Color32 = Color32::from_rgb(0xC0, 0xDA, 0xDE); //#c0dade
+
+pub fn lane_color(lane: usize) -> Color32 {
+    BRANCH_COLORS[lane % BRANCH_COLORS.len()]
+}
