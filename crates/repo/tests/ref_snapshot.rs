@@ -14,7 +14,8 @@ fn ref_named<'a>(repo: &'a groves_repo::Repo, name: &str) -> &'a groves_core::Gi
 
 #[test]
 fn open_reports_loose_packed_upstream_symbolic_and_tag_refs() {
-    let repo = groves_repo::open(&init_ref_fixture_repo()).expect("fixture must open");
+    let path = init_ref_fixture_repo();
+    let repo = groves_repo::open(&path).expect("fixture must open");
     let refs = repo.ref_snapshot().refs();
 
     assert!(
@@ -36,8 +37,17 @@ fn open_reports_loose_packed_upstream_symbolic_and_tag_refs() {
     assert!(matches!(&origin_head.kind, RefKind::Remote { .. }));
     assert_eq!(origin_head.target, ref_named(&repo, "origin/main").target);
 
-    let head = ref_named(&repo, "HEAD");
-    assert!(matches!(&head.kind, RefKind::WorktreeHead));
+    // Ticket 05 renamed worktree HEAD refs to worktree names; the main
+    // worktree is the first WorktreeHead ref, named after its folder.
+    let main_worktree_name = path
+        .file_name()
+        .and_then(|name| name.to_str())
+        .expect("fixture path is valid UTF-8");
+    let head = refs
+        .iter()
+        .find(|git_ref| git_ref.kind == RefKind::WorktreeHead)
+        .expect("the main worktree's HEAD must be in the snapshot");
+    assert_eq!(head.name, main_worktree_name);
     assert_eq!(head.target, ref_named(&repo, "main").target);
 
     let tag = ref_named(&repo, "v1");

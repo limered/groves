@@ -369,3 +369,58 @@ fn git_output(dir: &std::path::Path, args: &[&str]) -> String {
         .trim()
         .to_string()
 }
+
+/// Paths of the worktree fixture: the repo itself and its two linked
+/// worktree checkouts.
+pub struct WorktreeFixture {
+    pub main: PathBuf,
+    pub side: PathBuf,
+    pub detached: PathBuf,
+}
+
+/// Build a repo with a main worktree plus two linked worktrees, all under
+/// one fresh directory:
+///
+/// - `repo/` — the main worktree on branch `main`, holding `Root`
+/// - `side-checkout/` — attached worktree on branch `side`, holding
+///   `Side only work` (reachable only from that worktree's HEAD/branch)
+/// - `detached-checkout/` — created detached at the root commit, then a
+///   stray `Detached only work` commit that no branch reaches
+///
+/// The main worktree is deliberately named `repo` so its marker name is
+/// deterministic.
+pub fn init_worktree_fixture_repo() -> WorktreeFixture {
+    let root = fresh_dir("worktree-fixture");
+    let main = root.join("repo");
+    std::fs::create_dir(&main).expect("create main worktree dir");
+    git(&main, &["init", "-q", "-b", "main"]);
+    std::fs::write(main.join("root.txt"), "root\n").expect("write root file");
+    git(&main, &["add", "."]);
+    git(&main, &["commit", "-q", "-m", "Root"]);
+
+    let side = root.join("side-checkout");
+    git(
+        &main,
+        &["worktree", "add", side.to_str().expect("utf-8 path"), "-b", "side"],
+    );
+    std::fs::write(side.join("side.txt"), "side\n").expect("write side file");
+    git(&side, &["add", "."]);
+    git(&side, &["commit", "-q", "-m", "Side only work"]);
+
+    let detached = root.join("detached-checkout");
+    git(
+        &main,
+        &[
+            "worktree",
+            "add",
+            "--detach",
+            detached.to_str().expect("utf-8 path"),
+            "HEAD",
+        ],
+    );
+    std::fs::write(detached.join("stray.txt"), "stray\n").expect("write stray file");
+    git(&detached, &["add", "."]);
+    git(&detached, &["commit", "-q", "-m", "Detached only work"]);
+
+    WorktreeFixture { main, side, detached }
+}
