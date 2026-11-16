@@ -2,3 +2,4 @@
 // everything the binary and integration tests both need lives in the library.
 pub mod colors;
 pub mod render;
+pub mod head_jump;
