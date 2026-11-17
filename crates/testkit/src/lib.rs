@@ -405,7 +405,13 @@ pub fn init_worktree_fixture_repo() -> WorktreeFixture {
     let side = root.join("side-checkout");
     git(
         &main,
-        &["worktree", "add", side.to_str().expect("utf-8 path"), "-b", "side"],
+        &[
+            "worktree",
+            "add",
+            side.to_str().expect("utf-8 path"),
+            "-b",
+            "side",
+        ],
     );
     std::fs::write(side.join("side.txt"), "side\n").expect("write side file");
     git(&side, &["add", "."]);
@@ -426,5 +432,9 @@ pub fn init_worktree_fixture_repo() -> WorktreeFixture {
     git(&detached, &["add", "."]);
     git(&detached, &["commit", "-q", "-m", "Detached only work"]);
 
-    WorktreeFixture { main, side, detached }
+    WorktreeFixture {
+        main,
+        side,
+        detached,
+    }
 }

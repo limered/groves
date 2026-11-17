@@ -85,11 +85,11 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
             continue;
         };
 
-        let mut upstream_ref : Option<String> = None;
+        let mut upstream_ref: Option<String> = None;
         let wkt_ref = head.referent_name();
-        if let Some(wkt_ref_name) = wkt_ref{
+        if let Some(wkt_ref_name) = wkt_ref {
             upstream_ref = resolve_upstream_ref(&repo, wkt_ref_name);
-        }else {
+        } else {
             name = target.short_id().unwrap().to_string();
         }
 

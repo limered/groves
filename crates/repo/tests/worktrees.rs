@@ -7,9 +7,7 @@
 use groves_core::{CommitSource, Pane, RefKind};
 use groves_testkit::init_worktree_fixture_repo;
 
-fn worktree_heads<'a>(
-    repo: &'a groves_repo::Repo,
-) -> Vec<&'a groves_core::GitRef> {
+fn worktree_heads<'a>(repo: &'a groves_repo::Repo) -> Vec<&'a groves_core::GitRef> {
     repo.ref_snapshot()
         .refs()
         .iter()
@@ -42,17 +40,32 @@ fn snapshot_lists_all_worktree_heads_main_first_with_names() {
     let side_tip_id = commit_id_by_title(&repo, "Side only work");
     let stray_id = commit_id_by_title(&repo, "Detached only work");
 
-    assert_eq!(heads[0].name, "repo", "the main worktree is named after its folder");
+    assert_eq!(
+        heads[0].name, "repo",
+        "the main worktree is named after its folder"
+    );
     assert_eq!(
         heads[1].name,
         &stray_id[..7],
         "a detached worktree head is named by its short SHA"
     );
-    assert_eq!(heads[2].name, "side-checkout", "a linked worktree is named by its git worktree id");
+    assert_eq!(
+        heads[2].name, "side-checkout",
+        "a linked worktree is named by its git worktree id"
+    );
 
-    assert_eq!(heads[0].target, main_id, "main worktree HEAD at the main tip");
-    assert_eq!(heads[1].target, stray_id, "detached worktree HEAD at the stray commit");
-    assert_eq!(heads[2].target, side_tip_id, "side worktree HEAD at its own tip");
+    assert_eq!(
+        heads[0].target, main_id,
+        "main worktree HEAD at the main tip"
+    );
+    assert_eq!(
+        heads[1].target, stray_id,
+        "detached worktree HEAD at the stray commit"
+    );
+    assert_eq!(
+        heads[2].target, side_tip_id,
+        "side worktree HEAD at its own tip"
+    );
 
     for head in &heads {
         assert!(
@@ -86,7 +99,10 @@ fn history_reachable_only_from_secondary_worktree_heads_is_drawn() {
         .find(|row| row.id == side_tip_id)
         .expect("side tip has a row");
     assert!(
-        side_row.head_markers.iter().any(|m| m.name == "side-checkout"),
+        side_row
+            .head_markers
+            .iter()
+            .any(|m| m.name == "side-checkout"),
         "the side worktree's marker is on its HEAD row"
     );
 }
@@ -99,7 +115,10 @@ fn opening_a_linked_worktree_folder_yields_the_same_repository() {
     let from_side = groves_repo::open(&fixture.side).expect("linked worktree folder opens");
 
     let ids = |repo: &groves_repo::Repo| -> Vec<String> {
-        repo.commits().iter().map(|commit| commit.id.clone()).collect()
+        repo.commits()
+            .iter()
+            .map(|commit| commit.id.clone())
+            .collect()
     };
     assert_eq!(
         ids(&from_main),
@@ -108,7 +127,10 @@ fn opening_a_linked_worktree_folder_yields_the_same_repository() {
     );
 
     let head_names = |repo: &groves_repo::Repo| -> Vec<String> {
-        worktree_heads(repo).iter().map(|head| head.name.clone()).collect()
+        worktree_heads(repo)
+            .iter()
+            .map(|head| head.name.clone())
+            .collect()
     };
     assert_eq!(
         head_names(&from_main),

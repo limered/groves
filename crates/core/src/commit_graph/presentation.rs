@@ -1,8 +1,8 @@
+use crate::commit_graph::layout::Edge;
+use crate::commit_graph::selection::select_visible_history;
+use crate::{Commit, CommitSource, GitRef, LANE_WIDTH_PX, RefKind};
 use std::collections::HashMap;
 use std::time::SystemTime;
-use crate::commit_graph::layout::Edge;
-use crate::{CommitSource, RefKind, LANE_WIDTH_PX, GitRef, Commit};
-use crate::commit_graph::selection::select_visible_history;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HeadMarker {

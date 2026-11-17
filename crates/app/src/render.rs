@@ -107,11 +107,8 @@ pub fn draw_head_marker(row: &Row, pos: Pos2, st: Stroke, painter: &Painter) {
         return;
     }
     let inner_color = Color32::from_rgb(0x1E, 0x37, 0x3C);
-    if row.head_markers.iter().find(|x| x.is_main).is_some() {
-        painter.circle(pos, 6.0, inner_color, st);
-    } else {
-        painter.circle(pos, 6.0, inner_color, st);
-    }
+
+    painter.circle(pos, 6.0, inner_color, st);
 }
 
 pub fn render_edges(edge: &Edge, start: Pos2, end: Pos2, painter: &Painter) {

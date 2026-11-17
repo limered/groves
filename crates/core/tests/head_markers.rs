@@ -105,7 +105,10 @@ fn first_worktree_head_seeds_lane0_and_is_main() {
         .collect();
 
     assert_eq!(lanes["s1"], 0, "the main worktree's chain owns lane 0");
-    assert_eq!(lanes["m3"], 1, "the newer secondary worktree hangs beside it");
+    assert_eq!(
+        lanes["m3"], 1,
+        "the newer secondary worktree hangs beside it"
+    );
 
     let s1_row = pane
         .rows()

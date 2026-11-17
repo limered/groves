@@ -1,9 +1,8 @@
-use crate::{Commit, CommitSource, GitRef};
-
 pub mod layout;
 pub mod presentation;
 pub mod selection;
 
+use crate::CommitSource;
 pub use layout::Edge;
 pub use presentation::{HeadMarker, Pane, Pill, PillStyle, Row};
 
@@ -14,7 +13,7 @@ pub struct GraphOptions {
 
 pub fn build(
     source: &impl CommitSource,
-    options: &GraphOptions, // todo: add to load, so pane does not need to read now
+    _options: &GraphOptions, // todo: add to load, so pane does not need to read now
 ) -> Pane {
     Pane::load(source)
 }
