@@ -23,7 +23,9 @@ impl CommitSource for Repo {
 #[derive(Error, Debug)]
 pub enum RepoError {
     #[error("can't open repo: {0}")]
-    NotARepository(#[source] gix::Error),
+    CantOpenRepository(#[source] gix::Error),
+    #[error("can't open head: {0}")]
+    Head(#[source] gix::Error),
     #[error("couldn't get refs in repo, error: {0}")]
     Refs(#[source] gix::Error),
     #[error("error retrieving commit info")]
@@ -41,11 +43,11 @@ pub enum RepoError {
 }
 
 pub fn open(path: &Path) -> Result<Repo, RepoError> {
-    let repo = gix::open(path).map_err(RepoError::NotARepository)?;
+    let repo = gix::open(path).map_err(RepoError::CantOpenRepository)?;
     let mut walk_refs: Vec<GitRef> = Vec::new();
     let mut ref_commits: Vec<gix::ObjectId> = Vec::new();
 
-    let main_repo = repo.main_repo().map_err(RepoError::NotARepository)?;
+    let main_repo = repo.main_repo().map_err(RepoError::CantOpenRepository)?;
     let main_repo_name = main_repo
         .workdir()
         .unwrap_or_else(|| main_repo.git_dir())
@@ -55,9 +57,9 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         .unwrap()
         .to_string();
 
-    let mut head = main_repo.head().unwrap();
-    let head_target = head.peel_to_commit().unwrap();
-    let time = head_target.time().unwrap();
+    let mut head = main_repo.head().map_err(RepoError::Head)?;
+    let head_target = head.peel_to_commit().map_err(RepoError::Head)?;
+    let time = head_target.time().map_err(RepoError::Head)?;
     let upstream_ref = resolve_upstream_ref(&repo, head.name());
 
     walk_refs.push(GitRef {
@@ -90,7 +92,7 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         }else {
             name = target.short_id().unwrap().to_string();
         }
-        
+
         let Ok(time) = target.time() else { continue };
         walk_refs.push(GitRef {
             name: name.to_string(),
