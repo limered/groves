@@ -1,21 +1,16 @@
 pub mod commit_graph;
 pub mod repository;
 
+pub use crate::commit_graph::selection::is_stale;
 pub use crate::repository::model::{Commit, GitRef, RefKind, RefSnapshot};
 pub use crate::repository::CommitSource;
+use crate::commit_graph::selection::select_visible_history;
 
 use std::collections::HashMap;
 use std::time::SystemTime;
 
-// Emil owns this file — ticket 01 will add `CommitSource`, `Commit`, `Row` and `Pane` here.
 pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
-
-pub const DAY_SECONDS: i64 = 24 * 60 * 60;
-
-pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
-    now - tip_time > stale_after_days * DAY_SECONDS
-}
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Pill {
@@ -87,7 +82,7 @@ impl Pane {
         }
 
         heads.sort_by_key(|a| !a.1.is_main);
-        let mut only_rows:Vec<i32> = heads.iter().map(|(i, _)| *i).collect();
+        let mut only_rows: Vec<i32> = heads.iter().map(|(i, _)| *i).collect();
         only_rows.dedup();
         only_rows
     }
@@ -119,7 +114,7 @@ impl Pane {
         };
 
         let all_refs = source.ref_snapshot().refs();
-        let filtered_commits = Self::filter_commits(all_refs, commits);
+        let filtered_commits = select_visible_history(all_refs, commits);
         let filtered_commit_index = Pane::build_commit_index(&filtered_commits);
 
         let row_ids = Self::calculate_row_ids(&filtered_commits, &filtered_commit_index);
@@ -373,64 +368,4 @@ impl Pane {
             .map(|(i, c)| (c.id.clone(), i))
             .collect()
     }
-
-    fn should_keep(branch: &GitRef, all_refs: &[GitRef], now: i64) -> bool {
-        if branch.kind == RefKind::Tag {
-            return false;
-        }
-        if branch.kind == RefKind::WorktreeHead || branch.kind == RefKind::Local {
-            return true;
-        }
-        // only remotes left
-        if branch.name.contains("HEAD") {
-            return true;
-        }
-        // only remotes without HEAD
-        if all_refs
-            .iter()
-            .find(|r| match &r.upstream {
-                Some(upstream) => upstream.eq(&branch.name),
-                None => false,
-            })
-            .is_some()
-        {
-            return true;
-        }
-        // Only remotes without head and no local branch
-        !is_stale(branch.tip_time, now, 14)
-    }
-
-    fn filter_commits(refs: &[GitRef], commits: Vec<Commit>) -> Vec<Commit> {
-        let now = Self::stamp_now();
-        let commit_index: HashMap<String, usize> = Pane::build_commit_index(&commits);
-
-        let mut not_stale_ref_ids: HashSet<String> = refs
-            .iter()
-            .filter(|r| Pane::should_keep(r, refs, now))
-            .map(|r| r.target.clone())
-            .collect();
-
-        let mut work_queue: Vec<usize> = not_stale_ref_ids
-            .iter()
-            .map(|id| *commit_index.get(id).unwrap())
-            .collect();
-        while let Some(c_id) = work_queue.pop() {
-            let parents = commits[c_id].parents.clone();
-            for p in &parents {
-                let p_id = commit_index.get(p).unwrap();
-                if not_stale_ref_ids.insert(p.clone()) {
-                    work_queue.push(*p_id);
-                }
-            }
-        }
-        commits
-            .into_iter()
-            .filter(|c| not_stale_ref_ids.contains(&c.id))
-            .collect()
-    }
-}
-
-pub trait CommitSource {
-    fn commits(&self) -> Vec<Commit>;
-    fn ref_snapshot(&self) -> &RefSnapshot;
 }
