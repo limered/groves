@@ -1,6 +1,6 @@
 use crate::commit_graph::layout::Edge;
 use crate::commit_graph::selection::select_visible_history;
-use crate::{Commit, CommitSource, GitRef, LANE_WIDTH_PX, RefKind};
+use crate::{Commit, CommitSource, GitRef, GraphOptions, RefKind};
 use std::collections::HashMap;
 use std::time::SystemTime;
 
@@ -80,10 +80,9 @@ impl Pane {
     pub fn lane_count(&self) -> usize {
         self.lane_count
     }
-    pub fn graph_width_px(&self) -> f32 {
+    pub fn load(source: &impl CommitSource, options: &GraphOptions) -> Self {
         self.lane_count() as f32 * LANE_WIDTH_PX
     }
-    pub fn load(source: &impl CommitSource) -> Self {
         let commits = source.commits();
         let mut rows: Vec<Row> = Vec::new();
         let mut edges = Vec::new();
@@ -98,7 +97,8 @@ impl Pane {
         };
 
         let all_refs = source.ref_snapshot().refs();
-        let filtered_commits = select_visible_history(all_refs, commits);
+        let filtered_commits =
+            select_visible_history(all_refs, commits, options.now, options.stale_after_days);
         let filtered_commit_index = Pane::build_commit_index(&filtered_commits);
 
         let row_ids = Self::calculate_row_ids(&filtered_commits, &filtered_commit_index);
@@ -336,13 +336,6 @@ impl Pane {
                 reserved_lanes[i] = Some(*p_id);
             }
         }
-    }
-
-    pub fn stamp_now() -> i64 {
-        SystemTime::now()
-            .duration_since(SystemTime::UNIX_EPOCH)
-            .unwrap()
-            .as_secs() as i64
     }
 
     pub(crate) fn build_commit_index(commits: &[Commit]) -> HashMap<String, usize> {

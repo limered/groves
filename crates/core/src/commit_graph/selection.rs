@@ -8,7 +8,12 @@ pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
     now - tip_time > stale_after_days * DAY_SECONDS
 }
 
-pub fn should_keep_ref(branch: &GitRef, all_refs: &[GitRef], now: i64) -> bool {
+pub fn should_keep_ref(
+    branch: &GitRef,
+    all_refs: &[GitRef],
+    now: i64,
+    stale_after_days: i64,
+) -> bool {
     if branch.kind == RefKind::Tag {
         return false;
     }
@@ -31,16 +36,20 @@ pub fn should_keep_ref(branch: &GitRef, all_refs: &[GitRef], now: i64) -> bool {
         return true;
     }
     // Only remotes without head and no local branch
-    !is_stale(branch.tip_time, now, 14)
+    !is_stale(branch.tip_time, now, stale_after_days)
 }
 
-pub fn select_visible_history(refs: &[GitRef], commits: Vec<Commit>) -> Vec<Commit> {
-    let now = Pane::stamp_now();
+pub fn select_visible_history(
+    refs: &[GitRef],
+    commits: Vec<Commit>,
+    now: i64,
+    stale_after_days: i64,
+) -> Vec<Commit> {
     let commit_index: HashMap<String, usize> = Pane::build_commit_index(&commits);
 
     let mut not_stale_ref_ids: HashSet<String> = refs
         .iter()
-        .filter(|r| should_keep_ref(r, refs, now))
+        .filter(|r| should_keep_ref(r, refs, now, stale_after_days))
         .map(|r| r.target.clone())
         .collect();
 

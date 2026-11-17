@@ -11,6 +11,7 @@ use groves_core::commit_graph::GraphOptions;
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX, commit_graph};
 use groves_repo::{Repo, RepoError, open};
 use std::path::Path;
+use std::time::SystemTime;
 
 const WIDTH_PILL_AREA: f32 = 200.0;
 
@@ -168,7 +169,7 @@ fn main() {
     };
 
     let options = GraphOptions {
-        now: Pane::stamp_now(),
+        now: stamp_now(),
         stale_after_days: 14,
     };
 
@@ -183,4 +184,11 @@ fn main() {
 fn create_app(repo: Result<Repo, RepoError>, options: &GraphOptions) -> Result<Pane, String> {
     repo.map(|repo| commit_graph::build(&repo, options))
         .map_err(|err| err.to_string())
+}
+
+fn stamp_now() -> i64 {
+    SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .unwrap()
+        .as_secs() as i64
 }
