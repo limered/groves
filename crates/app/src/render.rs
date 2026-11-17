@@ -1,12 +1,14 @@
-//! Pure drawing geometry for a pane: edge routing, widths, coordinates.
-//!
-//! Ticket 03b: `route_edge` — turning a pane edge span into per-row-gap
-//! waypoints — goes here in this module.
-
 use crate::colors::lane_color;
 use eframe::epaint::Stroke;
 use egui::{Color32, FontId, Painter, Pos2, StrokeKind, vec2};
-use groves_core::{Edge, LANE_WIDTH_PX, Pill, PillStyle, ROW_HEIGHT_PX, Row};
+use groves_core::{Edge, Pill, PillStyle, Row};
+
+pub const ROW_HEIGHT_PX: f32 = 22.0;
+pub const LANE_WIDTH_PX: f32 = 14.0;
+
+pub fn graph_width_px(lane_count: usize) -> f32 {
+    lane_count as f32 * LANE_WIDTH_PX
+}
 
 pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
     if edge.parent_lane == edge.child_lane {

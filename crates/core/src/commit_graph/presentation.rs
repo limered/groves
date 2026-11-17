@@ -81,8 +81,6 @@ impl Pane {
         self.lane_count
     }
     pub fn load(source: &impl CommitSource, options: &GraphOptions) -> Self {
-        self.lane_count() as f32 * LANE_WIDTH_PX
-    }
         let commits = source.commits();
         let mut rows: Vec<Row> = Vec::new();
         let mut edges = Vec::new();

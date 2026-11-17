@@ -11,9 +11,6 @@ pub struct GraphOptions {
     pub stale_after_days: i64,
 }
 
-pub fn build(
-    source: &impl CommitSource,
-    _options: &GraphOptions, // todo: add to load, so pane does not need to read now
-) -> Pane {
-    Pane::load(source)
+pub fn build(source: &impl CommitSource, options: &GraphOptions) -> Pane {
+    Pane::load(source, options)
 }
