@@ -102,6 +102,18 @@ pub fn draw_dots(row: &Row, dot_pos: Pos2, st: Stroke, painter: &Painter) {
     painter.circle(dot_pos, radius, color, st);
 }
 
+pub fn draw_head_marker(row: &Row, pos: Pos2, st: Stroke, painter: &Painter) {
+    if row.head_markers.is_empty() {
+        return;
+    }
+    let inner_color = Color32::from_rgb(0x1E, 0x37, 0x3C);
+    if row.head_markers.iter().find(|x| x.is_main).is_some() {
+        painter.circle(pos, 6.0, inner_color, st);
+    } else {
+        painter.circle(pos, 6.0, inner_color, st);
+    }
+}
+
 pub fn render_edges(edge: &Edge, start: Pos2, end: Pos2, painter: &Painter) {
     let col_this = lane_color(edge.parent_lane);
     let st_this = Stroke::new(2.0, col_this);
