@@ -4,7 +4,9 @@
 use eframe::egui::{Sense, Vec2};
 use egui::{Align2, FontId, Pos2, Stroke};
 use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
-use groves_app::render::{draw_dots, draw_head_marker, draw_pill, draw_pill_connector, render_edges, route_edge};
+use groves_app::render::{
+    draw_dots, draw_head_marker, draw_pill, draw_pill_connector, render_edges, route_edge,
+};
 use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 use std::path::Path;
