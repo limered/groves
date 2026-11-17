@@ -7,7 +7,8 @@ use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
 use groves_app::render::{
     draw_dots, draw_head_marker, draw_pill, draw_pill_connector, render_edges, route_edge,
 };
-use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
+use groves_core::commit_graph::GraphOptions;
+use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX, commit_graph};
 use groves_repo::{Repo, RepoError, open};
 use std::path::Path;
 
@@ -166,15 +167,20 @@ fn main() {
         open(&path)
     };
 
+    let options = GraphOptions {
+        now: Pane::stamp_now(),
+        stale_after_days: 14,
+    };
+
     let app = GrovesApp {
-        content: create_app(repo),
+        content: create_app(repo, &options),
     };
     let native_options = eframe::NativeOptions::default();
     eframe::run_native("Groves", native_options, Box::new(|_cc| Ok(Box::new(app))))
         .expect("failed to start");
 }
 
-fn create_app(repo: Result<Repo, RepoError>) -> Result<Pane, String> {
-    repo.map(|repo| Pane::load(&repo))
+fn create_app(repo: Result<Repo, RepoError>, options: &GraphOptions) -> Result<Pane, String> {
+    repo.map(|repo| commit_graph::build(&repo, options))
         .map_err(|err| err.to_string())
 }

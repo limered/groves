@@ -1,5 +1,6 @@
-use crate::{Commit, GitRef, Pane, RefKind};
+use crate::{Commit, GitRef, RefKind};
 use std::collections::{HashMap, HashSet};
+use crate::commit_graph::Pane;
 
 pub const DAY_SECONDS: i64 = 24 * 60 * 60;
 
