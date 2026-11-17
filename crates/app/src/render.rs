@@ -72,7 +72,7 @@ pub fn draw_pill(
     size.x = size.x.max(size.y);
 
     let rect = egui::Rect::from_min_size(centered_pos, size);
-    let radius = egui::CornerRadius::same((rect.height() / 4.0).round() as u8);
+    let radius = egui::CornerRadius::same(5.0 as u8);
 
     if pill.style == PillStyle::Filled || pill.style == PillStyle::Synced {
         painter.rect_filled(rect, radius, pill_col);
