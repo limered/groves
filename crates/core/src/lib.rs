@@ -105,7 +105,23 @@ impl Pane {
     }
 
     pub fn head_jump_rows(&self) -> Vec<i32> {
-        Vec::new()
+        let mut heads: Vec<(i32, HeadMarker)> = Vec::new();
+        for (i, hms) in self
+            .rows
+            .iter()
+            .enumerate()
+            .filter(|(_, row)| !row.head_markers.is_empty())
+            .map(|(i, row)| (i as i32, row.head_markers.clone()))
+        {
+            for hm in hms {
+                heads.push((i, hm));
+            }
+        }
+
+        heads.sort_by_key(|a| !a.1.is_main);
+        let mut only_rows:Vec<i32> = heads.iter().map(|(i, _)| *i).collect();
+        only_rows.dedup();
+        only_rows
     }
 
     pub fn rows(&self) -> &[Row] {
@@ -154,7 +170,7 @@ impl Pane {
                 .or_default()
                 .push(r.clone());
         }
-        
+
         let mut lane_count = 0;
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
@@ -163,9 +179,13 @@ impl Pane {
                 let mut head_markers: Vec<HeadMarker> = Vec::new();
                 if let Some(commit_refs) = commit_to_ref.get(&c.id) {
                     pill = Self::build_pill(commit_refs);
-                    head_markers = commit_refs.iter()
+                    head_markers = commit_refs
+                        .iter()
                         .filter(|r| r.kind == RefKind::WorktreeHead)
-                        .map(|r| HeadMarker {name: r.name.clone(), is_main: r == head_ref})
+                        .map(|r| HeadMarker {
+                            name: r.name.clone(),
+                            is_main: r == head_ref,
+                        })
                         .collect();
                 }
 
