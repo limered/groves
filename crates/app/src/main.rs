@@ -9,7 +9,7 @@ use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
 use groves_repo::{Repo, RepoError, open};
 use std::path::Path;
 
-const WIDTH_PILL_AREA: f32 = 150.0;
+const WIDTH_PILL_AREA: f32 = 200.0;
 
 struct GrovesApp {
     content: Result<Pane, String>,

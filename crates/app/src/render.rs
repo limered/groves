@@ -45,7 +45,7 @@ pub fn draw_pill(
             .char_indices()
             .next()
             .unwrap();
-        branch_text = format!("{0}/{1}", branch_type.1.to_uppercase(), branch_text);
+        branch_text = format!("{0}.{1}", branch_type.1.to_uppercase(), branch_text);
     }
 
     if branch_text.chars().count() > 12 {
@@ -54,11 +54,11 @@ pub fn draw_pill(
     }
 
     if pill.plus_count > 0 {
-        branch_text = format!("{0}|+{1}", branch_text, pill.plus_count);
+        branch_text = format!("{0} +{1}", branch_text, pill.plus_count);
     }
 
     if pill.style == PillStyle::Synced {
-        branch_text = format!("⇅{}", branch_text);
+        branch_text = format!("⇅ {}", branch_text);
     }
 
     let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
@@ -72,7 +72,7 @@ pub fn draw_pill(
     size.x = size.x.max(size.y);
 
     let rect = egui::Rect::from_min_size(centered_pos, size);
-    let radius = egui::CornerRadius::same((rect.height() / 2.0).round() as u8);
+    let radius = egui::CornerRadius::same((rect.height() / 4.0).round() as u8);
 
     if pill.style == PillStyle::Filled || pill.style == PillStyle::Synced {
         painter.rect_filled(rect, radius, pill_col);
