@@ -3,12 +3,12 @@
 //! Owned by the mentor. Emil makes these pass by changing `crates/core`.
 
 use groves_core::Pane;
-use groves_testkit::SyntheticSource;
+use groves_testkit::{SyntheticSource, TEST_NOW, pane_options};
 
 #[test]
 fn pane_lists_rows_newest_first_with_short_sha_and_title() {
     let source = SyntheticSource::three();
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     let rows = pane.rows();
     assert_eq!(rows.len(), 3, "one row per commit");
@@ -27,6 +27,6 @@ fn pane_lists_rows_newest_first_with_short_sha_and_title() {
 #[test]
 fn pane_is_empty_without_commits() {
     let source = SyntheticSource::new(vec![]);
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     assert!(pane.rows().is_empty());
 }

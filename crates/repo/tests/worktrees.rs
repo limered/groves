@@ -5,7 +5,7 @@
 //! Owned by the mentor. Emil makes these pass by changing `crates/repo`.
 
 use groves_core::{CommitSource, Pane, RefKind};
-use groves_testkit::init_worktree_fixture_repo;
+use groves_testkit::{TEST_NOW, init_worktree_fixture_repo, pane_options};
 
 fn worktree_heads<'a>(repo: &'a groves_repo::Repo) -> Vec<&'a groves_core::GitRef> {
     repo.ref_snapshot()
@@ -79,7 +79,7 @@ fn snapshot_lists_all_worktree_heads_main_first_with_names() {
 fn history_reachable_only_from_secondary_worktree_heads_is_drawn() {
     let fixture = init_worktree_fixture_repo();
     let repo = groves_repo::open(&fixture.main).expect("fixture must open");
-    let pane = Pane::load(&repo);
+    let pane = Pane::load(&repo, &pane_options(TEST_NOW));
 
     let titles: Vec<&str> = pane.rows().iter().map(|row| row.title.as_str()).collect();
     assert!(

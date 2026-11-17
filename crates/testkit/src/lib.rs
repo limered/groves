@@ -9,8 +9,22 @@ use std::{
     path::PathBuf,
     process::Command,
     sync::atomic::{AtomicU64, Ordering},
-    time::{SystemTime, UNIX_EPOCH},
 };
+
+/// The fixed "today" every synthetic fixture is anchored to. The caller owns
+/// the clock, so tests pass this as `GraphOptions::now` and never read the
+/// wall clock — the whole suite stays deterministic.
+pub const TEST_NOW: i64 = 1_790_000_000;
+
+/// `GraphOptions` for a plain `Pane::load` in tests: the given `now` and the
+/// spec's 14-day default window. Tests that pin the window's exact value or
+/// boundary construct `GraphOptions` literals instead (see staleness.rs).
+pub fn pane_options(now: i64) -> groves_core::GraphOptions {
+    groves_core::GraphOptions {
+        now,
+        stale_after_days: 14,
+    }
+}
 
 /// Test binaries run their tests in parallel threads within one process, so
 /// a pid suffix alone cannot separate two fixture calls — every call gets
@@ -138,19 +152,14 @@ impl SyntheticSource {
     }
 
     /// Preset times (100–400) are toy values for *relative* order only.
-    /// Since ticket 03 the staleness window compares remote-ref tip times
-    /// against the real clock, so `g` maps them into the recent past of the
-    /// actual wall clock: order-preserving, always inside the window.
+    /// They map into the recent past of [`TEST_NOW`]: order-preserving, and
+    /// — fed back as `GraphOptions::now` — always inside the 14-day window.
     fn g(id: &str, parents: &[&str], title: &str, time: i64, refs: &[&str]) -> GraphCommit {
-        let now = SystemTime::now()
-            .duration_since(UNIX_EPOCH)
-            .expect("system clock is after the Unix epoch")
-            .as_secs() as i64;
         GraphCommit {
             id: id.to_string(),
             parents: parents.iter().map(|p| (*p).to_string()).collect(),
             title: title.to_string(),
-            time: now - (500 - time),
+            time: TEST_NOW - (500 - time),
             refs: refs.iter().map(|r| (*r).to_string()).collect(),
         }
     }

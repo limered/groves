@@ -3,7 +3,7 @@
 //! Owned by the mentor. Emil makes these pass by changing `crates/repo`.
 
 use groves_core::{CommitSource, Pane};
-use groves_testkit::{init_branch_fixture_repo, init_fixture_repo};
+use groves_testkit::{TEST_NOW, init_branch_fixture_repo, init_fixture_repo, pane_options};
 
 #[test]
 fn linear_fixture_wires_parents_tip_to_root() {
@@ -24,7 +24,7 @@ fn linear_fixture_wires_parents_tip_to_root() {
     );
 
     // And the pane draws the real repo as one lane.
-    let pane = Pane::load(&repo);
+    let pane = Pane::load(&repo, &pane_options(TEST_NOW));
     assert_eq!(pane.lane_count(), 1);
     assert!(pane.rows().iter().all(|row| row.lane == 0));
 }
@@ -50,7 +50,7 @@ fn merge_fixture_reports_both_parents() {
     }
 
     // The pane draws the merge with two lanes and an edge per parent.
-    let pane = Pane::load(&repo);
+    let pane = Pane::load(&repo, &pane_options(TEST_NOW));
     assert_eq!(pane.lane_count(), 2);
     let merge_row = pane
         .rows()

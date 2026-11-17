@@ -19,17 +19,14 @@
 //!   when the snapshot carries HEAD's referent name.
 
 use groves_core::{GitRef, Pane, Pill, PillStyle, RefKind};
-use groves_testkit::{GraphCommit, SyntheticSource};
-use std::time::{SystemTime, UNIX_EPOCH};
+use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW, pane_options};
 
 const DAY: i64 = 24 * 60 * 60;
 
+/// Days before the fixed [`TEST_NOW`] the fixtures place their tips at.
+/// The caller owns the clock now, so the wall clock is out of here too.
 fn seconds_ago(days: i64) -> i64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system clock is after the Unix epoch")
-        .as_secs() as i64;
-    now - days * DAY
+    TEST_NOW - days * DAY
 }
 
 /// Fresh-enough remote ref (inside the 14-day window) so `Pane::load` keeps it.
@@ -99,7 +96,7 @@ fn local_and_upstream_on_one_commit_collapse_into_a_synced_pill() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -126,7 +123,7 @@ fn local_branch_beats_remote_and_the_rest_is_plus_n() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -150,7 +147,7 @@ fn remote_only_commit_takes_an_outline_pill() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -176,7 +173,7 @@ fn origin_head_alias_never_pills_or_counts() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -205,7 +202,7 @@ fn tags_never_pill_or_count() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -234,7 +231,7 @@ fn diverged_upstream_stays_unsynced() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -273,7 +270,7 @@ fn upstream_not_in_snapshot_stays_a_plain_local_pill() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -303,7 +300,7 @@ fn worktree_head_refs_never_pill_or_count() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -326,7 +323,7 @@ fn refs_in_the_same_tier_are_chosen_alphabetically() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "tip"),
@@ -360,7 +357,7 @@ fn stale_remote_branch_still_decorates_its_visible_tip() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         pill_of(&pane, "st1"),

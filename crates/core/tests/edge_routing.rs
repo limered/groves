@@ -8,8 +8,8 @@
 //! differently, and the renderer can't tell them apart from the four
 //! span fields alone, so the edge data names it.
 
-use groves_core::{GitRef, Pane, RefKind};
-use groves_testkit::{GraphCommit, SyntheticSource};
+use groves_core::{GitRef, GraphOptions, Pane, RefKind};
+use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW};
 
 fn two_merge_shape() -> Pane {
     let source = SyntheticSource::for_graph_with_refs(
@@ -84,7 +84,13 @@ fn two_merge_shape() -> Pane {
             },
         ],
     );
-    Pane::load(&source)
+    Pane::load(
+        &source,
+        &GraphOptions {
+            now: TEST_NOW,
+            stale_after_days: 14,
+        },
+    )
 }
 
 fn edge_of(pane: &Pane, child_row: usize, parent_row: usize) -> &groves_core::Edge {

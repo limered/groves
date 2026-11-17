@@ -5,7 +5,7 @@
 //! Owned by the mentor. Emil makes these pass by changing `crates/core`.
 
 use groves_core::{GitRef, HeadMarker, Pane, RefKind};
-use groves_testkit::{GraphCommit, SyntheticSource};
+use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW, pane_options};
 
 fn git_ref(name: &str, target: &str, tip_time: i64) -> GitRef {
     GitRef {
@@ -47,7 +47,7 @@ fn tip_shared_source() -> SyntheticSource {
 
 #[test]
 fn rows_carry_head_markers_named_by_their_worktree() {
-    let pane = Pane::load(&tip_shared_source());
+    let pane = Pane::load(&tip_shared_source(), &pane_options(TEST_NOW));
 
     let row = |id: &str| {
         pane.rows()
@@ -97,7 +97,7 @@ fn first_worktree_head_seeds_lane0_and_is_main() {
         vec![git_ref("wt-a", "s1", 300), git_ref("wt-b", "m3", 400)],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     let lanes: std::collections::HashMap<String, usize> = pane
         .rows()
         .iter()
@@ -138,7 +138,7 @@ fn first_worktree_head_seeds_lane0_and_is_main() {
 
 #[test]
 fn head_jump_rows_go_main_first_then_the_others_deduped() {
-    let pane = Pane::load(&tip_shared_source());
+    let pane = Pane::load(&tip_shared_source(), &pane_options(TEST_NOW));
 
     assert_eq!(
         pane.head_jump_rows(),
@@ -160,7 +160,7 @@ fn head_jump_rows_follow_worktree_order_not_row_order() {
         vec![git_ref("wt-a", "s1", 300), git_ref("wt-b", "m3", 400)],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     assert_eq!(
         pane.head_jump_rows(),
         vec![1, 0],

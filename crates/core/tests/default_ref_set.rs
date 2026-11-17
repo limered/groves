@@ -3,18 +3,15 @@
 //! only history. Tests are owned by the mentor; Emil changes product code.
 
 use groves_core::{GitRef, Pane, RefKind};
-use groves_testkit::{GraphCommit, SyntheticSource};
+use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW, pane_options};
 use std::collections::{HashMap, HashSet};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 const DAY: i64 = 24 * 60 * 60;
 
+/// Days before the fixed [`TEST_NOW`] the fixtures place their tips at.
+/// The caller owns the clock now, so the wall clock is out of here too.
 fn seconds_ago(days: i64) -> i64 {
-    let now = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .expect("system clock is after the Unix epoch")
-        .as_secs() as i64;
-    now - days * DAY
+    TEST_NOW - days * DAY
 }
 
 fn git_ref(
@@ -111,7 +108,7 @@ fn stale_remote_and_tag_only_history_do_not_add_rows_or_lanes() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(visible_ids(&pane), HashSet::from(["m3", "s1", "m1", "m0"]));
     assert_eq!(
@@ -162,7 +159,7 @@ fn local_upstream_and_origin_head_are_included_even_when_their_tips_are_old() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         visible_ids(&pane),
@@ -213,7 +210,7 @@ fn a_merged_stale_branchs_line_is_still_drawn() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
 
     assert_eq!(
         visible_ids(&pane),
@@ -249,7 +246,7 @@ fn two_merges_of_one_spur_follow_gits_own_columns() {
         ],
     );
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     let lanes = lanes_by_id(&pane);
 
     assert_eq!(
