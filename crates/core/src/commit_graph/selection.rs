@@ -36,7 +36,9 @@ pub(super) fn select_visible_history(
     while let Some(c_id) = work_queue.pop() {
         let parents = commits[c_id].parents.clone();
         for p in &parents {
-            let Some(p_id) = commit_index.get(p) else { continue };
+            let Some(p_id) = commit_index.get(p) else {
+                continue;
+            };
             if not_stale_ref_ids.insert(p.clone()) {
                 work_queue.push(*p_id);
             }
