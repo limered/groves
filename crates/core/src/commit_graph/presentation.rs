@@ -1,7 +1,7 @@
 use crate::commit_graph::layout::{Edge, calculate_lane_ids, calculate_row_ids};
 use crate::commit_graph::selection::{build_commit_index, select_visible_history};
 use crate::{CommitSource, GitRef, GraphOptions, RefKind};
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HeadMarker {
@@ -50,9 +50,9 @@ impl Pane {
         }
     }
 
-    pub fn head_jump_rows(&self) -> Vec<i32> {
-        let mut seen: HashMap<usize, bool> = HashMap::new();
-        let mut result: Vec<i32> = Vec::new();
+    pub fn head_jump_rows(&self) -> Vec<usize> {
+        let mut seen: HashSet<usize> = HashSet::new();
+        let mut result: Vec<usize> = Vec::new();
 
         for is_main in [true, false] {
             for (row_index, row) in self.rows.iter().enumerate() {
@@ -61,8 +61,8 @@ impl Pane {
                     .iter()
                     .any(|marker| marker.is_main == is_main);
 
-                if matches && seen.insert(row_index, true).is_none() {
-                    result.push(row_index as i32);
+                if matches && seen.insert(row_index) {
+                    result.push(row_index);
                 }
             }
         }
