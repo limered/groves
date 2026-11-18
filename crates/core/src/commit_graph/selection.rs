@@ -7,7 +7,7 @@ pub fn is_stale(tip_time: i64, now: i64, stale_after_days: i64) -> bool {
     now - tip_time > stale_after_days * DAY_SECONDS
 }
 
-fn build_commit_index(commits: &[Commit]) -> HashMap<String, usize> {
+pub(super) fn build_commit_index(commits: &[Commit]) -> HashMap<String, usize> {
     commits
         .iter()
         .enumerate()

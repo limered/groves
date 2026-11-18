@@ -1,5 +1,5 @@
 use crate::commit_graph::layout::{Edge, calculate_lane_ids, calculate_row_ids};
-use crate::commit_graph::selection::select_visible_history;
+use crate::commit_graph::selection::{build_commit_index, select_visible_history};
 use crate::{CommitSource, GitRef, GraphOptions, RefKind};
 use std::collections::HashMap;
 
@@ -95,17 +95,13 @@ impl Pane {
         let all_refs = source.ref_snapshot().refs();
         let filtered_commits =
             select_visible_history(all_refs, commits, options.now, options.stale_after_days);
-        let filtered_commit_index = &filtered_commits
-            .iter()
-            .enumerate()
-            .map(|(i, c)| (c.id.clone(), i))
-            .collect();
+        let filtered_commit_index = build_commit_index(&filtered_commits);
 
-        let row_ids = calculate_row_ids(&filtered_commits, filtered_commit_index);
+        let row_ids = calculate_row_ids(&filtered_commits, &filtered_commit_index);
         let (placed, lanes) = calculate_lane_ids(
             &head_ref,
             &filtered_commits,
-            filtered_commit_index,
+            &filtered_commit_index,
             &row_ids,
         );
 
