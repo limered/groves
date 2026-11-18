@@ -9,8 +9,13 @@
 
 use groves_core::{GraphOptions, Pane, is_stale};
 use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW};
+use std::collections::HashSet;
 
 const DAY: i64 = 24 * 60 * 60;
+
+fn visible_ids(pane: &Pane) -> HashSet<&str> {
+    pane.rows().iter().map(|row| row.id.as_str()).collect()
+}
 
 #[test]
 fn the_staleness_boundary_is_inclusive() {
@@ -33,9 +38,19 @@ fn the_staleness_boundary_is_inclusive() {
 
 #[test]
 fn the_stale_window_comes_from_the_options_not_a_constant() {
-    // A remote branch updated 20 days ago: past the default 14-day window,
-    // inside a 30-day one. Same ref, same `now` — only the option differs.
+    // `Pane::load` anchors on a worktree head and draws an empty pane
+    // without one, so the fixture keeps a tiny HEAD'd chain beside the
+    // remote's: two disjoint histories, only the remote's window varies.
+    // A remote branch updated 20 days ago is past the default 14-day
+    // window, inside a 30-day one — same ref, same `now`, different option.
     let source = SyntheticSource::for_graph(vec![
+        GraphCommit {
+            id: "w1".to_string(),
+            parents: vec![],
+            title: "Worktree tip".to_string(),
+            time: TEST_NOW,
+            refs: vec!["HEAD".to_string()],
+        },
         GraphCommit {
             id: "tip".to_string(),
             parents: vec!["root".to_string()],
@@ -59,9 +74,10 @@ fn the_stale_window_comes_from_the_options_not_a_constant() {
             stale_after_days: 14,
         },
     );
-    assert!(
-        default_window.rows().is_empty(),
-        "20 days is past the default 14-day window: the branch is out"
+    assert_eq!(
+        visible_ids(&default_window),
+        HashSet::from(["w1"]),
+        "20 days is past the default 14-day window: the remote branch is out"
     );
 
     let wide_window = Pane::load(
@@ -72,8 +88,8 @@ fn the_stale_window_comes_from_the_options_not_a_constant() {
         },
     );
     assert_eq!(
-        wide_window.rows().len(),
-        2,
+        visible_ids(&wide_window),
+        HashSet::from(["w1", "tip", "root"]),
         "within a 30-day window the same remote branch is drawn"
     );
 }
@@ -82,9 +98,17 @@ fn the_stale_window_comes_from_the_options_not_a_constant() {
 fn the_pane_believes_the_now_it_is_given_not_the_wall_clock() {
     // The remote tip was updated exactly when the caller says "now" —
     // whatever the real clock says, the pane must trust the options.
-    // (An implementation that stamps the wall clock itself sees a ~weeks-old
-    // tip here and drops the ref; trusting `options.now` keeps it.)
+    // (An implementation that stamps the wall clock itself sees a weeks-old
+    // tip here and drops the remote chain; trusting `options.now` keeps it.)
+    // A worktree-head chain anchors the pane, as in the test above.
     let source = SyntheticSource::for_graph(vec![
+        GraphCommit {
+            id: "w1".to_string(),
+            parents: vec![],
+            title: "Worktree tip".to_string(),
+            time: TEST_NOW,
+            refs: vec!["HEAD".to_string()],
+        },
         GraphCommit {
             id: "tip".to_string(),
             parents: vec!["root".to_string()],
@@ -109,8 +133,8 @@ fn the_pane_believes_the_now_it_is_given_not_the_wall_clock() {
         },
     );
     assert_eq!(
-        pane.rows().len(),
-        2,
+        visible_ids(&pane),
+        HashSet::from(["w1", "tip", "root"]),
         "the caller's now is the truth: a tip updated this second is fresh"
     );
 }

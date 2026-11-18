@@ -7,7 +7,7 @@
 use groves_core::{CommitSource, Pane, RefKind};
 use groves_testkit::{TEST_NOW, init_worktree_fixture_repo, pane_options};
 
-fn worktree_heads<'a>(repo: &'a groves_repo::Repo) -> Vec<&'a groves_core::GitRef> {
+fn worktree_heads(repo: &groves_repo::Repo) -> Vec<&groves_core::GitRef> {
     repo.ref_snapshot()
         .refs()
         .iter()
