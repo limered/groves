@@ -2,7 +2,6 @@ use crate::commit_graph::layout::Edge;
 use crate::commit_graph::selection::select_visible_history;
 use crate::{Commit, CommitSource, GitRef, GraphOptions, RefKind};
 use std::collections::HashMap;
-use std::time::SystemTime;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct HeadMarker {
@@ -97,13 +96,17 @@ impl Pane {
         let all_refs = source.ref_snapshot().refs();
         let filtered_commits =
             select_visible_history(all_refs, commits, options.now, options.stale_after_days);
-        let filtered_commit_index = Pane::build_commit_index(&filtered_commits);
+        let filtered_commit_index = &filtered_commits
+            .iter()
+            .enumerate()
+            .map(|(i, c)| (c.id.clone(), i))
+            .collect();
 
-        let row_ids = Self::calculate_row_ids(&filtered_commits, &filtered_commit_index);
+        let row_ids = Self::calculate_row_ids(&filtered_commits, filtered_commit_index);
         let (placed, lanes) = Self::calculate_lane_ids(
             &head_ref,
             &filtered_commits,
-            &filtered_commit_index,
+            filtered_commit_index,
             &row_ids,
         );
 
@@ -334,13 +337,5 @@ impl Pane {
                 reserved_lanes[i] = Some(*p_id);
             }
         }
-    }
-
-    pub(crate) fn build_commit_index(commits: &[Commit]) -> HashMap<String, usize> {
-        commits
-            .iter()
-            .enumerate()
-            .map(|(i, c)| (c.id.clone(), i))
-            .collect()
     }
 }
