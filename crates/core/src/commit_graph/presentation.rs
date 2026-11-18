@@ -1,6 +1,6 @@
-use crate::commit_graph::layout::{calculate_row_ids, Edge, calculate_lane_ids};
+use crate::commit_graph::layout::{Edge, calculate_lane_ids, calculate_row_ids};
 use crate::commit_graph::selection::select_visible_history;
-use crate::{Commit, CommitSource, GitRef, GraphOptions, RefKind};
+use crate::{CommitSource, GitRef, GraphOptions, RefKind};
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
@@ -51,23 +51,22 @@ impl Pane {
     }
 
     pub fn head_jump_rows(&self) -> Vec<i32> {
-        let mut heads: Vec<(i32, HeadMarker)> = Vec::new();
-        for (i, hms) in self
-            .rows
-            .iter()
-            .enumerate()
-            .filter(|(_, row)| !row.head_markers.is_empty())
-            .map(|(i, row)| (i as i32, row.head_markers.clone()))
-        {
-            for hm in hms {
-                heads.push((i, hm));
+        let mut seen: HashMap<usize, bool> = HashMap::new();
+        let mut result: Vec<i32> = Vec::new();
+
+        for is_main in [true, false] {
+            for (row_index, row) in self.rows.iter().enumerate() {
+                let matches = row
+                    .head_markers
+                    .iter()
+                    .any(|marker| marker.is_main == is_main);
+
+                if matches && seen.insert(row_index, true).is_none() {
+                    result.push(row_index as i32);
+                }
             }
         }
-
-        heads.sort_by_key(|a| !a.1.is_main);
-        let mut only_rows: Vec<i32> = heads.iter().map(|(i, _)| *i).collect();
-        only_rows.dedup();
-        only_rows
+        result
     }
 
     pub fn rows(&self) -> &[Row] {
@@ -124,7 +123,7 @@ impl Pane {
         for (row, &commit_index) in row_ids.iter().enumerate() {
             row_by_commit[commit_index] = Some(row);
         }
-        
+
         let mut lane_count = 0;
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
@@ -142,13 +141,12 @@ impl Pane {
                         })
                         .collect();
                 }
-                
+
                 for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {
                         continue;
                     };
-                    let Some(parent_row) = row_by_commit[*p_index]
-                    else {
+                    let Some(parent_row) = row_by_commit[*p_index] else {
                         continue;
                     };
                     let edge = Edge {
