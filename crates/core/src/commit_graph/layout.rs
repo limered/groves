@@ -1,5 +1,5 @@
-use std::collections::HashMap;
 use crate::{Commit, GitRef};
+use std::collections::HashMap;
 
 #[derive(Debug, Eq, PartialEq, Hash)]
 pub struct Edge {
