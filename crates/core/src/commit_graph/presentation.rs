@@ -119,6 +119,12 @@ impl Pane {
                 .push(r.clone());
         }
 
+        let mut row_by_commit = vec![None; filtered_commits.len()];
+
+        for (row, &commit_index) in row_ids.iter().enumerate() {
+            row_by_commit[commit_index] = Some(row);
+        }
+        
         let mut lane_count = 0;
         for (child_row, index) in row_ids.iter().enumerate() {
             if placed[*index] {
@@ -136,14 +142,12 @@ impl Pane {
                         })
                         .collect();
                 }
-
+                
                 for (parent_index, parent) in c.parents.iter().enumerate() {
                     let Some(p_index) = filtered_commit_index.get(parent) else {
                         continue;
                     };
-                    let Some(parent_row) = row_ids
-                        .iter()
-                        .position(|inner_row_index| inner_row_index.eq(p_index))
+                    let Some(parent_row) = row_by_commit[*p_index]
                     else {
                         continue;
                     };
