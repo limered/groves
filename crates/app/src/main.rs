@@ -1,15 +1,12 @@
-// Emil owns this file — ticket 01 will add the eframe app that opens a repo
-// path from the CLI args and lists its commits (or shows the open error).
-
 use eframe::egui::{Sense, Vec2};
-use egui::{Align2, FontId, Pos2, Stroke};
+use egui::{Align2, CentralPanel, FontId, Pos2, Stroke};
 use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
 use groves_app::render::{
     LANE_WIDTH_PX, ROW_HEIGHT_PX, draw_dots, draw_head_marker, draw_pill, draw_pill_connector,
     graph_width_px, render_edges, route_edge,
 };
+use groves_core::Pane;
 use groves_core::commit_graph::GraphOptions;
-use groves_core::{Pane, commit_graph};
 use groves_repo::{Repo, RepoError, open};
 use std::path::Path;
 use std::time::SystemTime;
@@ -21,8 +18,8 @@ struct GrovesApp {
 }
 
 impl eframe::App for GrovesApp {
-    fn ui(&mut self, ui: &mut eframe::egui::Ui, _frame: &mut eframe::Frame) {
-        egui::CentralPanel::default().show(ui, |ui| {
+    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+        CentralPanel::default().show(ui, |ui| {
             match &self.content {
                 Ok(pane) => {
                     let row_height = ROW_HEIGHT_PX;
@@ -184,7 +181,7 @@ fn main() {
 }
 
 fn create_app(repo: Result<Repo, RepoError>, options: &GraphOptions) -> Result<Pane, String> {
-    repo.map(|repo| commit_graph::build(&repo, options))
+    repo.map(|repo| Pane::load(&repo, options))
         .map_err(|err| err.to_string())
 }
 
