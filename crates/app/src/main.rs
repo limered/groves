@@ -1,8 +1,9 @@
 use eframe::egui::{Sense, Vec2};
-use egui::{Align2, CentralPanel, FontId, Pos2, Stroke};
+use egui::{Align, Align2, CentralPanel, FontId, Key, Pos2, Rect, Stroke, Ui};
 use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
+use groves_app::head_jump::next_head_jump;
 use groves_app::render::{
-    LANE_WIDTH_PX, ROW_HEIGHT_PX, draw_dots, draw_head_marker, draw_pill, draw_pill_connector,
+    LANE_WIDTH_PX, ROW_HEIGHT_PX, draw_dots, draw_head_marker, draw_pill_connector, draw_pills,
     graph_width_px, render_edges, route_edge,
 };
 use groves_core::Pane;
@@ -15,6 +16,7 @@ const WIDTH_PILL_AREA: f32 = 200.0;
 
 struct GrovesApp {
     content: Result<Pane, String>,
+    head_jump_cursor: Option<usize>,
 }
 
 impl eframe::App for GrovesApp {
@@ -22,6 +24,18 @@ impl eframe::App for GrovesApp {
         CentralPanel::default().show(ui, |ui| {
             match &self.content {
                 Ok(pane) => {
+                    // prepare jump to head
+                    let head_jump_targets = pane.head_jump_rows();
+                    let mut is_jump_pending = false;
+                    if ui.input(|i| i.key_pressed(Key::H)) {
+                        if let Some(next) =
+                            next_head_jump(self.head_jump_cursor, &head_jump_targets)
+                        {
+                            self.head_jump_cursor = Some(next.0);
+                        }
+                        is_jump_pending = true;
+                    }
+
                     let row_height = ROW_HEIGHT_PX;
                     let row_height_without_spacing = row_height - ui.spacing().item_spacing.y;
                     let sa = egui::ScrollArea::vertical().auto_shrink(false);
@@ -44,6 +58,19 @@ impl eframe::App for GrovesApp {
 
                             let font = FontId::monospace(13.0);
                             let pill_font = FontId::monospace(14.0);
+
+                            // jump to head
+                            if is_jump_pending
+                                && let Some(jump_target_index) = self.head_jump_cursor
+                            {
+                                let target_row = head_jump_targets[jump_target_index];
+                                let y_center = calc_y(resp.rect.top(), row_range.start, target_row);
+                                let jump_rect = Rect::from_center_size(
+                                    Pos2::new(resp.rect.center().x, y_center),
+                                    Vec2::new(resp.rect.width(), ROW_HEIGHT_PX),
+                                );
+                                ui.scroll_to_rect(jump_rect, Some(Align::Center))
+                            }
 
                             // edges
                             let range_start = row_range.start;
@@ -88,7 +115,7 @@ impl eframe::App for GrovesApp {
                                         calc_y(top, range_start, row_id),
                                     );
 
-                                    let pill_width = draw_pill(
+                                    let pill_width = draw_pills(
                                         pill,
                                         pill_pos,
                                         &pill_painter,
@@ -174,6 +201,7 @@ fn main() {
 
     let app = GrovesApp {
         content: create_app(repo, &options),
+        head_jump_cursor: None,
     };
     let native_options = eframe::NativeOptions::default();
     eframe::run_native("Groves", native_options, Box::new(|_cc| Ok(Box::new(app))))

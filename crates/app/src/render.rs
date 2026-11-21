@@ -29,7 +29,7 @@ pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
     points
 }
 
-pub fn draw_pill(
+pub fn draw_pills(
     pill: &Pill,
     pos: Pos2,
     painter: &Painter,
