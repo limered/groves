@@ -10,6 +10,8 @@ pub const LANE_WIDTH_PX: f32 = 14.0;
 const SYNCED_ICON: &str = "🔘";
 const FOLDER_ICON: &str = "📁";
 const CHAR_BUDGET: usize = 20;
+const MARKER_SIZE: usize = 13;
+const PLUS_MARKER_SIZE: usize = 3;
 
 pub fn graph_width_px(lane_count: usize) -> f32 {
     lane_count as f32 * LANE_WIDTH_PX
@@ -136,7 +138,7 @@ fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_co
     if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
         let mut text = format!("{}{}", FOLDER_ICON, main_marker.name);
 
-        text = shorten_text_to(text, 12);
+        text = shorten_text_to(text, MARKER_SIZE.saturating_sub(1));
 
         let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
 
@@ -206,10 +208,10 @@ fn center_position_vertically(pos: Pos2) -> Pos2 {
 fn calculate_char_budget(has_head_marker: bool, has_plus_marker: bool) -> usize {
     let mut char_budget_left: usize = CHAR_BUDGET;
     if has_head_marker {
-        char_budget_left -= 12;
+        char_budget_left -= MARKER_SIZE;
     }
     if has_plus_marker {
-        char_budget_left -= 3;
+        char_budget_left -= PLUS_MARKER_SIZE;
     }
     char_budget_left
 }
