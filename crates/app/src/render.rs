@@ -224,7 +224,7 @@ fn center_position_vertically(pos: Pos2) -> Pos2 {
     centered_pos
 }
 
-fn calculate_char_budget(
+pub fn calculate_char_budget(
     has_head_marker: bool,
     has_plus_marker: bool,
     pill_name_length: usize,
@@ -234,9 +234,9 @@ fn calculate_char_budget(
     if has_plus_marker {
         branch_budget -= PLUS_MARKER_SIZE;
     }
-    if has_head_marker && branch_budget > pill_name_length {
+    if has_head_marker && branch_budget - MARKER_SIZE > pill_name_length {
         marker_budget = CHAR_BUDGET - pill_name_length;
-        if has_head_marker {
+        if has_plus_marker {
             marker_budget -= PLUS_MARKER_SIZE;
         }
         return (pill_name_length, marker_budget);
