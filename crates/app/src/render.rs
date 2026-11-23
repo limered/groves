@@ -1,4 +1,5 @@
-use crate::colors::{lane_color, BACKGROUND_COLOR};
+use std::string::ToString;
+use crate::colors::{BACKGROUND_COLOR, lane_color};
 use eframe::emath::Rect;
 use eframe::epaint::{CornerRadius, Stroke};
 use egui::{Color32, FontId, Painter, Pos2, StrokeKind, Vec2, vec2};
@@ -6,6 +7,8 @@ use groves_core::{Edge, Pill, PillStyle, Row};
 
 pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
+const SYNCED_ICON: &str = "🔘";
+const FOLDER_ICON: &str = "📁";
 
 pub fn graph_width_px(lane_count: usize) -> f32 {
     lane_count as f32 * LANE_WIDTH_PX
@@ -30,7 +33,7 @@ pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
     points
 }
 
-fn generate_branch_pill_name(pill: &Pill) -> String {
+fn generate_branch_pill_name(pill: &Pill, char_budget: usize) -> String {
     let pill_text_parts: Vec<&str> = pill.name.split('/').collect();
     let mut branch_text = pill_text_parts.last().unwrap().to_string();
     if pill_text_parts.len() > 1 {
@@ -40,12 +43,12 @@ fn generate_branch_pill_name(pill: &Pill) -> String {
             .unwrap();
         branch_text = format!("{0}.{1}", branch_type.1.to_uppercase(), branch_text);
     }
-    branch_text = shorten_text_to(&branch_text, 12);
-    
+
     if pill.style == PillStyle::Synced {
-        branch_text = format!("⇅ {}", branch_text);
+        branch_text = format!("{}{}", SYNCED_ICON, branch_text);
     }
-    branch_text
+
+    shorten_text_to(&branch_text, char_budget)
 }
 
 fn draw_branch_pill(
@@ -61,7 +64,7 @@ fn draw_branch_pill(
         text_col = pill_col;
     }
 
-    let galley = painter.layout_no_wrap(text.to_string(), font, text_col);
+    let galley = painter.layout_no_wrap(text.to_string(), font.clone(), text_col);
 
     let padding = vec2(8.0, 2.0);
     let mut size = galley.size() + padding;
@@ -130,8 +133,10 @@ fn paint_pill(pill: &Pill, painter: &Painter, pill_col: Color32, rect: Rect, rad
 
 fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_col: Color32) -> f32 {
     if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
-        let text = shorten_text_to(&main_marker.name, 12);
-
+        let mut text = format!("{}{}", FOLDER_ICON, main_marker.name);
+        
+        text = shorten_text_to(&main_marker.name, 12);
+        
         let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
 
         let mut size = galley.size() + vec2(8.0, 2.0);
@@ -145,18 +150,20 @@ fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_co
 
         let text_pos = rect.center() - galley.size() / 2.0;
         painter.galley(text_pos, galley, BACKGROUND_COLOR);
-        return rect.width() + 2.0
+        return rect.width() + 2.0;
     }
     0.0
 }
 
-fn shorten_text_to(text: &String, max_chars: usize) -> String{
+fn shorten_text_to(text: &String, max_chars: usize) -> String {
     if text.chars().count() <= max_chars {
         return text.clone();
     }
-    let t = text.chars().take(12).collect::<String>();
+    let t = text.chars().take(max_chars - 1).collect::<String>();
     format!("{}…", t)
 }
+
+const CHAR_BUDGET: usize = 20;
 
 pub fn draw_pills(
     row: &Row,
@@ -166,36 +173,64 @@ pub fn draw_pills(
     font: FontId,
     pill_col: Color32,
 ) -> f32 {
+    let mut char_budget_left: usize = CHAR_BUDGET;
     let mut centered_pos = pos;
     centered_pos.y -= (ROW_HEIGHT_PX / 2.0) - 2.0;
-
-    let branch_text = generate_branch_pill_name(pill);
-    let mut full_width = draw_branch_pill(
-        pill,
-        centered_pos,
-        painter,
-        font.clone(),
-        pill_col,
-        &branch_text,
-    );
-
-    if pill.plus_count > 0 {
-        let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-        full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col)
-    }
-
-    if !row.head_markers.is_empty() {
-        let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-        full_width += draw_head_pill(
-            row,
-            head_marker_pos,
+    let mut control_width = 0.0;
+    if row.head_markers.is_empty() || row.head_markers.iter().find(|hm| hm.is_main).is_none() {
+        if pill.plus_count == 0 {
+            let branch_text = generate_branch_pill_name(pill, char_budget_left);
+            let mut full_width = draw_branch_pill(
+                pill,
+                centered_pos,
+                painter,
+                font.clone(),
+                pill_col,
+                &branch_text,
+            );
+            control_width = full_width;
+            // draw only branch ful size
+        } else {
+            let branch_text = generate_branch_pill_name(pill, char_budget_left - 3);
+            let mut full_width = draw_branch_pill(
+                pill,
+                centered_pos,
+                painter,
+                font.clone(),
+                pill_col,
+                &branch_text,
+            );
+            let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+            full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col);
+            control_width = full_width;
+        }
+    } else {
+        //draw branch, plus and folder
+        if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
+            char_budget_left -= 12;
+        }
+        if pill.plus_count > 0 {
+            char_budget_left += 3;
+        }
+        let branch_text = generate_branch_pill_name(pill, char_budget_left);
+        let mut full_width = draw_branch_pill(
+            pill,
+            centered_pos,
             painter,
             font.clone(),
             pill_col,
+            &branch_text,
         );
+        if pill.plus_count > 0 {
+            let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+            full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col)
+        }
+        let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+        full_width += draw_head_pill(row, head_marker_pos, painter, font.clone(), pill_col);
+        control_width = full_width;
     }
-    
-    full_width
+
+    control_width
 }
 
 pub fn draw_pill_connector(pos: Pos2, dot_x: f32, painter: &Painter, color: Color32) {
