@@ -48,15 +48,13 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
     let mut ref_commits: Vec<gix::ObjectId> = Vec::new();
 
     let main_repo = repo.main_repo().map_err(RepoError::CantOpenRepository)?;
-    let main_repo_path = main_repo
-        .workdir()
-        .unwrap_or_else(|| main_repo.git_dir());
-        
-    let main_repo_file_name = match main_repo_path.file_name() { 
+    let main_repo_path = main_repo.workdir().unwrap_or_else(|| main_repo.git_dir());
+
+    let main_repo_file_name = match main_repo_path.file_name() {
         Some(name) => name.to_string_lossy().to_string(),
         None => repo.git_dir().display().to_string(),
     };
-    
+
     let mut head = main_repo.head().map_err(RepoError::Head)?;
     let head_target = head.peel_to_commit().map_err(RepoError::Head)?;
     let time = head_target.time().map_err(RepoError::Head)?;

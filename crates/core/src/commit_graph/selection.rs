@@ -31,10 +31,7 @@ pub(super) fn select_visible_history(
 
     let mut work_queue: Vec<usize> = not_stale_ref_ids
         .iter()
-        .filter_map(|id| match commit_index.get(id){
-            None => None,
-            Some(i) => Some(*i),
-        })
+        .filter_map(|id| commit_index.get(id).copied())
         .collect();
     while let Some(c_id) = work_queue.pop() {
         let parents = commits[c_id].parents.clone();

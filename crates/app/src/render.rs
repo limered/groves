@@ -49,7 +49,7 @@ fn generate_branch_pill_name(pill: &Pill, char_budget: usize) -> String {
         branch_text = format!("{}{}", SYNCED_ICON, branch_text);
     }
 
-    shorten_text_to(&branch_text, char_budget)
+    shorten_text_to(branch_text, char_budget)
 }
 
 fn draw_branch_pill(
@@ -106,7 +106,7 @@ fn draw_plus_pill(
     let mut size = galley.size() + padding;
     size.x = size.x.max(size.y);
 
-    let p = pos.clone() + Vec2::new(2.0, 0.0);
+    let p = pos + Vec2::new(2.0, 0.0);
     let rect = Rect::from_min_size(p, size);
     let radius = CornerRadius {
         ne: 5.0 as u8,
@@ -136,7 +136,7 @@ fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_co
     if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
         let mut text = format!("{}{}", FOLDER_ICON, main_marker.name);
 
-        text = shorten_text_to(&text, 12);
+        text = shorten_text_to(text, 12);
 
         let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
 
@@ -156,7 +156,7 @@ fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_co
     0.0
 }
 
-fn shorten_text_to(text: &String, max_chars: usize) -> String {
+fn shorten_text_to(text: String, max_chars: usize) -> String {
     if text.chars().count() <= max_chars {
         return text.clone();
     }

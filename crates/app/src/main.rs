@@ -20,7 +20,7 @@ struct GrovesApp {
 }
 
 impl eframe::App for GrovesApp {
-    fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         CentralPanel::default().show(ui, |ui| {
             match &self.content {
                 Ok(pane) => {
