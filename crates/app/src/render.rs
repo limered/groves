@@ -10,7 +10,7 @@ pub const LANE_WIDTH_PX: f32 = 14.0;
 const SYNCED_ICON: &str = "🔘";
 const FOLDER_ICON: &str = "📁";
 const CHAR_BUDGET: usize = 20;
-const MARKER_SIZE: usize = 13;
+const MARKER_SIZE: usize = 9;
 const PLUS_MARKER_SIZE: usize = 3;
 
 pub fn graph_width_px(lane_count: usize) -> f32 {
@@ -36,7 +36,7 @@ pub fn route_edge(edge: &Edge) -> Vec<(usize, usize)> {
     points
 }
 
-fn generate_branch_pill_name(pill: &Pill, char_budget: usize) -> String {
+fn generate_branch_pill_name(pill: &Pill) -> String {
     let pill_text_parts: Vec<&str> = pill.name.split('/').collect();
     let mut branch_text = pill_text_parts.last().unwrap().to_string();
     if pill_text_parts.len() > 1 {
@@ -50,8 +50,7 @@ fn generate_branch_pill_name(pill: &Pill, char_budget: usize) -> String {
     if pill.style == PillStyle::Synced {
         branch_text = format!("{}{}", SYNCED_ICON, branch_text);
     }
-
-    shorten_text_to(branch_text, char_budget)
+    branch_text
 }
 
 fn draw_branch_pill(
@@ -134,11 +133,18 @@ fn paint_pill(pill: &Pill, painter: &Painter, pill_col: Color32, rect: Rect, rad
     }
 }
 
-fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_col: Color32) -> f32 {
+fn draw_head_pill(
+    row: &Row,
+    pos: Pos2,
+    painter: &Painter,
+    font: FontId,
+    pill_col: Color32,
+    marker_budget: usize,
+) -> f32 {
     if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
         let mut text = format!("{}{}", FOLDER_ICON, main_marker.name);
 
-        text = shorten_text_to(text, MARKER_SIZE.saturating_sub(1));
+        text = shorten_text_to(text, marker_budget.saturating_sub(2));
 
         let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
 
@@ -176,16 +182,22 @@ pub fn draw_pills(
 ) -> f32 {
     let has_head_marker = row.head_markers.iter().any(|hm| hm.is_main);
     let has_plus_marker = pill.plus_count > 0;
-    let branch_char_budget = calculate_char_budget(has_head_marker, has_plus_marker);
+    let branch_text = generate_branch_pill_name(pill);
+    let (branch_char_budget, marker_budget) = calculate_char_budget(
+        has_head_marker,
+        has_plus_marker,
+        branch_text.chars().count(),
+    );
+    let final_branch_length = shorten_text_to(branch_text, branch_char_budget);
+
     let centered_pos = center_position_vertically(pos);
-    let branch_text = generate_branch_pill_name(pill, branch_char_budget);
     let mut full_width = draw_branch_pill(
         pill,
         centered_pos,
         painter,
         font.clone(),
         pill_col,
-        &branch_text,
+        &final_branch_length,
     );
 
     if has_plus_marker {
@@ -194,7 +206,14 @@ pub fn draw_pills(
     }
     if has_head_marker {
         let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-        full_width += draw_head_pill(row, head_marker_pos, painter, font.clone(), pill_col);
+        full_width += draw_head_pill(
+            row,
+            head_marker_pos,
+            painter,
+            font.clone(),
+            pill_col,
+            marker_budget,
+        );
     }
     full_width
 }
@@ -205,15 +224,29 @@ fn center_position_vertically(pos: Pos2) -> Pos2 {
     centered_pos
 }
 
-fn calculate_char_budget(has_head_marker: bool, has_plus_marker: bool) -> usize {
-    let mut char_budget_left: usize = CHAR_BUDGET;
-    if has_head_marker {
-        char_budget_left -= MARKER_SIZE;
-    }
+fn calculate_char_budget(
+    has_head_marker: bool,
+    has_plus_marker: bool,
+    pill_name_length: usize,
+) -> (usize, usize) {
+    let mut branch_budget: usize = CHAR_BUDGET;
+    let mut marker_budget: usize;
     if has_plus_marker {
-        char_budget_left -= PLUS_MARKER_SIZE;
+        branch_budget -= PLUS_MARKER_SIZE;
     }
-    char_budget_left
+    if has_head_marker && branch_budget > pill_name_length {
+        marker_budget = CHAR_BUDGET - pill_name_length;
+        if has_head_marker {
+            marker_budget -= PLUS_MARKER_SIZE;
+        }
+        return (pill_name_length, marker_budget);
+    }
+
+    if has_head_marker {
+        branch_budget -= MARKER_SIZE;
+    }
+
+    (branch_budget, MARKER_SIZE)
 }
 
 pub fn draw_pill_connector(pos: Pos2, dot_x: f32, painter: &Painter, color: Color32) {
