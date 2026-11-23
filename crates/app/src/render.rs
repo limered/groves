@@ -1,9 +1,9 @@
-use std::string::ToString;
 use crate::colors::{BACKGROUND_COLOR, lane_color};
 use eframe::emath::Rect;
 use eframe::epaint::{CornerRadius, Stroke};
 use egui::{Color32, FontId, Painter, Pos2, StrokeKind, Vec2, vec2};
 use groves_core::{Edge, Pill, PillStyle, Row};
+use std::string::ToString;
 
 pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
@@ -134,9 +134,9 @@ fn paint_pill(pill: &Pill, painter: &Painter, pill_col: Color32, rect: Rect, rad
 fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_col: Color32) -> f32 {
     if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
         let mut text = format!("{}{}", FOLDER_ICON, main_marker.name);
-        
-        text = shorten_text_to(&main_marker.name, 12);
-        
+
+        text = shorten_text_to(&text, 12);
+
         let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
 
         let mut size = galley.size() + vec2(8.0, 2.0);
