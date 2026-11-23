@@ -209,7 +209,7 @@ fn calculate_char_budget(has_head_marker: bool, has_plus_marker: bool) -> usize 
         char_budget_left -= 12;
     }
     if has_plus_marker {
-        char_budget_left += 3;
+        char_budget_left -= 3;
     }
     char_budget_left
 }
