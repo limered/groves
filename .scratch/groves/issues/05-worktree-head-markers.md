@@ -30,12 +30,17 @@
 Build a playground repo with two extra worktrees:
 
 ```
+git init -q --bare origin.git
 git init -q -b main wt-playground && cd wt-playground
 echo x > root.txt && git add . && git commit -qm Root
+git remote add origin ../origin.git
+git push -q -u origin main
 git worktree add ../side-checkout -b side
 (cd ../side-checkout && echo s > side.txt && git add . && git commit -qm "Side only work")
+git push -q origin side
 git worktree add --detach ../detached-checkout HEAD
 (cd ../detached-checkout && echo d > stray.txt && git add . && git commit -qm "Detached only work")
+git fetch -q origin
 ```
 
 Then `cargo run -p groves-app -- wt-playground`:
@@ -45,3 +50,4 @@ Then `cargo run -p groves-app -- wt-playground`:
 3. Clicking a marker toggles its label: a secondary name stays after the click; clicking the main marker hides its name; clicking again restores it.
 4. `h` scrolls the main worktree's row into view (centred); pressing it again cycles to the next worktree's row; pressing it repeatedly wraps back to main. In a repo with one worktree, `h` always lands on that row.
 5. `cargo run -p groves-app -- ../side-checkout` draws the identical graph as opening `wt-playground` itself.
+6. The main pill reads `🔘main`: `main` has an upstream (`origin/main`) that is in sync, so the pill gets the synced style and icon. The `side` pill has no icon — it has no upstream. (This state was missing from the original recipe; the synced style was never exercised by the playground.)

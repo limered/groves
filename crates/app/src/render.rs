@@ -9,6 +9,7 @@ pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
 const SYNCED_ICON: &str = "🔘";
 const FOLDER_ICON: &str = "📁";
+const CHAR_BUDGET: usize = 20;
 
 pub fn graph_width_px(lane_count: usize) -> f32 {
     lane_count as f32 * LANE_WIDTH_PX
@@ -142,7 +143,7 @@ fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_co
         let mut size = galley.size() + vec2(8.0, 2.0);
         size.x = size.x.max(size.y);
 
-        let p = pos.clone() + Vec2::new(2.0, 0.0);
+        let p = pos + Vec2::new(2.0, 0.0);
         let rect = Rect::from_min_size(p, size);
         let radius = CornerRadius::same(5.0 as u8);
 
@@ -163,8 +164,6 @@ fn shorten_text_to(text: &String, max_chars: usize) -> String {
     format!("{}…", t)
 }
 
-const CHAR_BUDGET: usize = 20;
-
 pub fn draw_pills(
     row: &Row,
     pill: &Pill,
@@ -173,64 +172,46 @@ pub fn draw_pills(
     font: FontId,
     pill_col: Color32,
 ) -> f32 {
-    let mut char_budget_left: usize = CHAR_BUDGET;
-    let mut centered_pos = pos;
-    centered_pos.y -= (ROW_HEIGHT_PX / 2.0) - 2.0;
-    let mut control_width = 0.0;
-    if row.head_markers.is_empty() || row.head_markers.iter().find(|hm| hm.is_main).is_none() {
-        if pill.plus_count == 0 {
-            let branch_text = generate_branch_pill_name(pill, char_budget_left);
-            let mut full_width = draw_branch_pill(
-                pill,
-                centered_pos,
-                painter,
-                font.clone(),
-                pill_col,
-                &branch_text,
-            );
-            control_width = full_width;
-            // draw only branch ful size
-        } else {
-            let branch_text = generate_branch_pill_name(pill, char_budget_left - 3);
-            let mut full_width = draw_branch_pill(
-                pill,
-                centered_pos,
-                painter,
-                font.clone(),
-                pill_col,
-                &branch_text,
-            );
-            let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-            full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col);
-            control_width = full_width;
-        }
-    } else {
-        //draw branch, plus and folder
-        if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
-            char_budget_left -= 12;
-        }
-        if pill.plus_count > 0 {
-            char_budget_left += 3;
-        }
-        let branch_text = generate_branch_pill_name(pill, char_budget_left);
-        let mut full_width = draw_branch_pill(
-            pill,
-            centered_pos,
-            painter,
-            font.clone(),
-            pill_col,
-            &branch_text,
-        );
-        if pill.plus_count > 0 {
-            let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-            full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col)
-        }
+    let has_head_marker = row.head_markers.iter().any(|hm| hm.is_main);
+    let has_plus_marker = pill.plus_count > 0;
+    let branch_char_budget = calculate_char_budget(has_head_marker, has_plus_marker);
+    let centered_pos = center_position_vertically(pos);
+    let branch_text = generate_branch_pill_name(pill, branch_char_budget);
+    let mut full_width = draw_branch_pill(
+        pill,
+        centered_pos,
+        painter,
+        font.clone(),
+        pill_col,
+        &branch_text,
+    );
+
+    if has_plus_marker {
+        let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+        full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col)
+    }
+    if has_head_marker {
         let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
         full_width += draw_head_pill(row, head_marker_pos, painter, font.clone(), pill_col);
-        control_width = full_width;
     }
+    full_width
+}
 
-    control_width
+fn center_position_vertically(pos: Pos2) -> Pos2 {
+    let mut centered_pos = pos;
+    centered_pos.y -= (ROW_HEIGHT_PX / 2.0) - 2.0;
+    centered_pos
+}
+
+fn calculate_char_budget(has_head_marker: bool, has_plus_marker: bool) -> usize {
+    let mut char_budget_left: usize = CHAR_BUDGET;
+    if has_head_marker {
+        char_budget_left -= 12;
+    }
+    if has_plus_marker {
+        char_budget_left += 3;
+    }
+    char_budget_left
 }
 
 pub fn draw_pill_connector(pos: Pos2, dot_x: f32, painter: &Painter, color: Color32) {
