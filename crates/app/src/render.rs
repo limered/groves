@@ -1,9 +1,8 @@
-use crate::colors::lane_color;
+use crate::colors::{lane_color, BACKGROUND_COLOR};
+use eframe::emath::Rect;
 use eframe::epaint::{CornerRadius, Stroke};
 use egui::{Color32, FontId, Painter, Pos2, StrokeKind, Vec2, vec2};
 use groves_core::{Edge, Pill, PillStyle, Row};
-use std::ops::Add;
-use eframe::emath::Rect;
 
 pub const ROW_HEIGHT_PX: f32 = 22.0;
 pub const LANE_WIDTH_PX: f32 = 14.0;
@@ -41,10 +40,8 @@ fn generate_branch_pill_name(pill: &Pill) -> String {
             .unwrap();
         branch_text = format!("{0}.{1}", branch_type.1.to_uppercase(), branch_text);
     }
-    if branch_text.chars().count() > 12 {
-        branch_text = branch_text.chars().take(12).collect::<String>();
-        branch_text = format!("{}…", branch_text);
-    }
+    branch_text = shorten_text_to(&branch_text, 12);
+    
     if pill.style == PillStyle::Synced {
         branch_text = format!("⇅ {}", branch_text);
     }
@@ -59,22 +56,21 @@ fn draw_branch_pill(
     pill_col: Color32,
     text: &String,
 ) -> f32 {
-    let padding = vec2(8.0, 2.0);
-
-    let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
+    let mut text_col = BACKGROUND_COLOR;
     if pill.style == PillStyle::Outline {
         text_col = pill_col;
     }
 
     let galley = painter.layout_no_wrap(text.to_string(), font, text_col);
 
+    let padding = vec2(8.0, 2.0);
     let mut size = galley.size() + padding;
     size.x = size.x.max(size.y);
 
-    let rect = egui::Rect::from_min_size(pos, size);
-    let mut radius = egui::CornerRadius::same(5.0 as u8);
+    let rect = Rect::from_min_size(pos, size);
+    let mut radius = CornerRadius::same(5.0 as u8);
     if pill.plus_count > 0 {
-        radius = egui::CornerRadius {
+        radius = CornerRadius {
             ne: 0.0 as u8,
             se: 0.0 as u8,
             nw: 5.0 as u8,
@@ -95,21 +91,20 @@ fn draw_plus_pill(
     font: FontId,
     pill_col: Color32,
 ) -> f32 {
-    let padding = vec2(8.0, 2.0);
-
     let text = format!("+{}", pill.plus_count);
-    let mut text_col = Color32::from_rgb(0x38, 0x23, 0x2F); // #38232f
+    let mut text_col = BACKGROUND_COLOR;
     if pill.style == PillStyle::Outline {
         text_col = pill_col;
     }
     let galley = painter.layout_no_wrap(text.to_string(), font, text_col);
 
+    let padding = vec2(8.0, 2.0);
     let mut size = galley.size() + padding;
     size.x = size.x.max(size.y);
 
     let p = pos.clone() + Vec2::new(2.0, 0.0);
-    let rect = egui::Rect::from_min_size(p, size);
-    let radius = egui::CornerRadius {
+    let rect = Rect::from_min_size(p, size);
+    let radius = CornerRadius {
         ne: 5.0 as u8,
         se: 5.0 as u8,
         nw: 0.0 as u8,
@@ -133,11 +128,38 @@ fn paint_pill(pill: &Pill, painter: &Painter, pill_col: Color32, rect: Rect, rad
     }
 }
 
-fn draw_head_pill() -> f32 {
+fn draw_head_pill(row: &Row, pos: Pos2, painter: &Painter, font: FontId, pill_col: Color32) -> f32 {
+    if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
+        let text = shorten_text_to(&main_marker.name, 12);
+
+        let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
+
+        let mut size = galley.size() + vec2(8.0, 2.0);
+        size.x = size.x.max(size.y);
+
+        let p = pos.clone() + Vec2::new(2.0, 0.0);
+        let rect = Rect::from_min_size(p, size);
+        let radius = CornerRadius::same(5.0 as u8);
+
+        painter.rect_filled(rect, radius, pill_col.gamma_multiply(0.6));
+
+        let text_pos = rect.center() - galley.size() / 2.0;
+        painter.galley(text_pos, galley, BACKGROUND_COLOR);
+        return rect.width() + 2.0
+    }
     0.0
 }
 
+fn shorten_text_to(text: &String, max_chars: usize) -> String{
+    if text.chars().count() <= max_chars {
+        return text.clone();
+    }
+    let t = text.chars().take(12).collect::<String>();
+    format!("{}…", t)
+}
+
 pub fn draw_pills(
+    row: &Row,
     pill: &Pill,
     pos: Pos2,
     painter: &Painter,
@@ -158,10 +180,21 @@ pub fn draw_pills(
     );
 
     if pill.plus_count > 0 {
-        centered_pos.x += full_width;
-        full_width += draw_plus_pill(pill, centered_pos, painter, font.clone(), pill_col)
+        let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+        full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col)
     }
 
+    if !row.head_markers.is_empty() {
+        let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+        full_width += draw_head_pill(
+            row,
+            head_marker_pos,
+            painter,
+            font.clone(),
+            pill_col,
+        );
+    }
+    
     full_width
 }
 

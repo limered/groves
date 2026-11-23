@@ -116,6 +116,7 @@ impl eframe::App for GrovesApp {
                                     );
 
                                     let pill_width = draw_pills(
+                                        row,
                                         pill,
                                         pill_pos,
                                         &pill_painter,
