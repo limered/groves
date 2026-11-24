@@ -180,10 +180,13 @@ pub fn draw_pills(
     painter: &Painter,
     font: FontId,
     pill_col: Color32,
-    pinned_heads: &HashSet<String>
+    pinned_heads: &HashSet<String>,
+    hovered_head: &Option<String>
 ) -> f32 {
-    let has_head_marker = row.head_markers.iter().any(|hm| hm.is_main) ||
-        (pinned_heads.contains(&row.id) && !row.head_markers.is_empty());
+    let has_head_marker = !row.head_markers.is_empty() && 
+        (row.head_markers.iter().any(|hm| hm.is_main) ||
+        pinned_heads.contains(&row.id) ||
+            (hovered_head.is_some() && hovered_head.as_ref() == Some(&row.id)));
     let has_plus_marker = pill.plus_count > 0;
     let branch_text = generate_branch_pill_name(pill);
     let (branch_char_budget, marker_budget) = calculate_char_budget(

@@ -19,6 +19,7 @@ struct GrovesApp {
     content: Result<Pane, String>,
     head_jump_cursor: Option<usize>,
     pinned_head_rows: HashSet<String>,
+    hovered_head_row: Option<String>,
 }
 
 impl eframe::App for GrovesApp {
@@ -124,7 +125,8 @@ impl eframe::App for GrovesApp {
                                         &pill_painter,
                                         pill_font.clone(),
                                         lane_color(row.lane),
-                                        &self.pinned_head_rows
+                                        &self.pinned_head_rows,
+                                        &self.hovered_head_row,
                                     );
                                     draw_pill_connector(
                                         Pos2::new(pill_pos.x + pill_width, pill_pos.y),
@@ -141,16 +143,26 @@ impl eframe::App for GrovesApp {
                                 draw_dots(row, &dot_center, st, &painter);
                                 draw_head_marker(row, &dot_center, st, &painter);
                                 if !row.head_markers.is_empty() {
-                                    let rect = Rect::from_center_size(dot_center, Vec2::new(12.0, 12.0));
-                                    let response = ui.interact(rect, ui.id().with(row.id.clone()), Sense::click())
-                                        .on_hover_cursor(egui::CursorIcon::PointingHand);;
-                                    if response.clicked()
-                                    {
-                                        if self.pinned_head_rows.contains(&row.id){
-                                        self.pinned_head_rows.remove(&row.id);
-                                        }else {
-                                        self.pinned_head_rows.insert(row.id.clone());
+                                    let rect =
+                                        Rect::from_center_size(dot_center, Vec2::new(12.0, 12.0));
+                                    let response = ui
+                                        .interact(
+                                            rect,
+                                            ui.id().with(row.id.clone()),
+                                            Sense::click(),
+                                        )
+                                        .on_hover_cursor(egui::CursorIcon::PointingHand);
+                                    if response.clicked() {
+                                        if self.pinned_head_rows.contains(&row.id) {
+                                            self.pinned_head_rows.remove(&row.id);
+                                        } else {
+                                            self.pinned_head_rows.insert(row.id.clone());
                                         }
+                                    }
+                                    if response.hovered() {
+                                        self.hovered_head_row = Some(row.id.clone());
+                                    } else {
+                                        self.hovered_head_row = None;
                                     }
                                 }
 
@@ -221,6 +233,7 @@ fn main() {
         content: create_app(repo, &options),
         head_jump_cursor: None,
         pinned_head_rows: HashSet::new(),
+        hovered_head_row: None,
     };
     let native_options = eframe::NativeOptions::default();
     eframe::run_native("Groves", native_options, Box::new(|_cc| Ok(Box::new(app))))
