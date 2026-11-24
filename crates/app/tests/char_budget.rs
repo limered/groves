@@ -8,11 +8,12 @@
 //! Expected facade:
 //! ```rust,ignore
 //! // crates/app/src/render.rs
+//! pub struct CharBudget { pub branch: usize, pub marker: usize }
 //! pub fn calculate_char_budget(
 //!     has_head_marker: bool,
 //!     has_plus_marker: bool,
 //!     pill_name_length: usize,
-//! ) -> (usize, usize); // (branch_char_budget, marker_budget)
+//! ) -> CharBudget;
 //! ```
 
 use groves_app::render::{CharBudget, calculate_char_budget};

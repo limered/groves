@@ -6,7 +6,7 @@
 
 **Blocked by:** 03
 
-**Status:** in-progress
+**Status:** done
 
 ## Decisions (recorded before code)
 
@@ -16,6 +16,7 @@
 - **New facades:** `core::HeadMarker { name: String, is_main: bool }` on `Row.head_markers: Vec<HeadMarker>`; `core::Pane::head_jump_rows() -> Vec<usize>` (row indices in worktree order: main first, then the others, duplicate rows skipped); `app::head_jump::next_head_jump(cursor: Option<usize>, targets: &[usize]) -> Option<(usize, usize)>` (next cursor index + row to scroll to, wraps around).
 - **Clock and pixels (added mid-ticket, announced via the AGENTS.md rules):** `Pane::load` now takes `GraphOptions { now, stale_after_days }` — the caller stamps the clock, core owns the window; the 22/14 px constants and `graph_width_px` moved to `app::render` (the renderer owns pixel dimensions). Test call sites were updated in the same commits, and the staleness tests pin that both values come from the options.
 - **Label placement:** the marker's name label sits in the existing pill area — trailing right of the pill, at the left margin on rows without a pill (detached heads). Never inside the pill (pill and worktree label are different entities with different click semantics), never a dedicated column (story 25). Label looks secondary to the pill; long names clip and later get the ticket-20 treatment (truncate, full name on hover).
+- **Copy hash on click (extra, recorded at close):** clicking the short hash copies the full SHA to the clipboard (`ui.ctx().copy_text`). Off-spec one-liner a colleague needed; the spec's story list gets a real story when the detail panel (18) is designed. No visual feedback yet — candidate for a hover tooltip.
 
 **Rust focus:** `Option` combinators (`map`, `and_then`, `unwrap_or`), gix's worktree API, a small cycling state.
 
@@ -23,7 +24,7 @@
 - [x] A commit reachable only from a secondary worktree's HEAD is drawn — `worktrees.rs::history_reachable_only_from_secondary_worktree_heads_is_drawn`
 - [x] Opening a linked worktree path yields the same repository as opening the main one — `worktrees.rs::opening_a_linked_worktree_folder_yields_the_same_repository`
 - [x] Jump-to-HEAD order: main first, then the others, then wraps around — `core/tests/head_markers.rs::head_jump_rows_*` + `app/tests/head_jump.rs::jump_cycles_main_then_others_then_wraps`
-- [ ] Manual: markers, hover names and click-toggle work
+- [x] Manual: markers, hover names and click-toggle work (re-verified after the hover fix; detached SHA label confirmed on pill-less rows)
 
 ## Manual checks
 
@@ -51,3 +52,9 @@ Then `cargo run -p groves-app -- wt-playground`:
 4. `h` scrolls the main worktree's row into view (centred); pressing it again cycles to the next worktree's row; pressing it repeatedly wraps back to main. In a repo with one worktree, `h` always lands on that row.
 5. `cargo run -p groves-app -- ../side-checkout` draws the identical graph as opening `wt-playground` itself.
 6. The main pill reads `🔘main`: `main` has an upstream (`origin/main`) that is in sync, so the pill gets the synced style and icon. The `side` pill has no icon — it has no upstream. (This state was missing from the original recipe; the synced style was never exercised by the playground.)
+7. Clicking the short hash copies the full SHA to the clipboard.
+
+## Learned
+
+- Immediate-mode UI state: clear-then-rebuild per frame (one `unhover` at frame top, set during the loop) beats per-widget set/clear pairs, where the last widget wins; drawing a row *after* its own interact removes the one-frame lag.
+- Named result structs (`CharBudget`) replace ambiguous tuples; `let Ok(x) = ... else { continue }` matches a fallible loop's style better than `unwrap`; `HashSet::insert` returning false is the idiomatic dedup check.
