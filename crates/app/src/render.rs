@@ -219,13 +219,13 @@ pub fn draw_pills(
     let has_head_marker = !row.head_markers.is_empty()
         && (row.head_markers.iter().any(|hm| hm.is_main)
             || pane.head_marker_to_show().contains(&row.id));
-    
+
     let centered_pos = center_position_vertically(pos);
     let pill_col = lane_color(row.lane);
-    if let Some(pill) = &row.pill{
+    if let Some(pill) = &row.pill {
         let has_plus_marker = pill.plus_count > 0;
         let branch_text = generate_branch_pill_name(pill);
-        
+
         let budgets = calculate_char_budget(
             has_head_marker,
             has_plus_marker,
@@ -234,7 +234,7 @@ pub fn draw_pills(
         let final_branch_length = shorten_text_to(&branch_text, budgets.branch);
         let mut full_width =
             draw_branch_pill(pill, centered_pos, painter, pill_col, &final_branch_length);
-    
+
         if has_plus_marker {
             let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
             full_width += draw_plus_pill(pill, plus_pos, painter, pill_col)

@@ -108,10 +108,7 @@ impl Pane {
         let mut commit_to_ref: HashMap<String, Vec<GitRef>> = HashMap::new();
         for r in all_refs {
             let t = r.target.clone();
-            commit_to_ref
-                .entry(t)
-                .or_default()
-                .push(r.clone());
+            commit_to_ref.entry(t).or_default().push(r.clone());
         }
 
         let mut row_by_commit = vec![None; filtered_commits.len()];

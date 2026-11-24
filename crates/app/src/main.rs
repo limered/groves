@@ -145,7 +145,7 @@ impl eframe::App for GrovesApp {
                                         &pill_painter,
                                         &self.pane_marker_context,
                                     );
-                                    
+
                                     if let Some(pill_width) = pill_width_option {
                                         draw_pill_connector(
                                             Pos2::new(pill_pos.x + pill_width, pill_pos.y),
