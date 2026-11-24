@@ -1,7 +1,8 @@
+use std::collections::HashSet;
 use crate::colors::{BACKGROUND_COLOR, lane_color};
 use eframe::emath::Rect;
 use eframe::epaint::{CornerRadius, Stroke};
-use egui::{Color32, FontId, Painter, Pos2, StrokeKind, Vec2, vec2};
+use egui::{Color32, FontId, Painter, Pos2, Sense, StrokeKind, Ui, Vec2, vec2};
 use groves_core::{Edge, Pill, PillStyle, Row};
 use std::string::ToString;
 
@@ -141,7 +142,7 @@ fn draw_head_pill(
     pill_col: Color32,
     marker_budget: usize,
 ) -> f32 {
-    if let Some(main_marker) = row.head_markers.iter().find(|hm| hm.is_main) {
+    if let Some(main_marker) = row.head_markers.first() {
         let mut text = format!("{}{}", FOLDER_ICON, main_marker.name);
 
         text = shorten_text_to(text, marker_budget.saturating_sub(2));
@@ -179,8 +180,10 @@ pub fn draw_pills(
     painter: &Painter,
     font: FontId,
     pill_col: Color32,
+    pinned_heads: &HashSet<String>
 ) -> f32 {
-    let has_head_marker = row.head_markers.iter().any(|hm| hm.is_main);
+    let has_head_marker = row.head_markers.iter().any(|hm| hm.is_main) ||
+        (pinned_heads.contains(&row.id) && !row.head_markers.is_empty());
     let has_plus_marker = pill.plus_count > 0;
     let branch_text = generate_branch_pill_name(pill);
     let (branch_char_budget, marker_budget) = calculate_char_budget(
@@ -254,23 +257,23 @@ pub fn draw_pill_connector(pos: Pos2, dot_x: f32, painter: &Painter, color: Colo
     painter.line_segment([pos, Pos2::new(dot_x, pos.y)], st);
 }
 
-pub fn draw_dots(row: &Row, dot_pos: Pos2, st: Stroke, painter: &Painter) {
+pub fn draw_dots(row: &Row, dot_pos: &Pos2, st: Stroke, painter: &Painter) {
     let color = if row.is_merge {
         lane_color(row.lane)
     } else {
         Color32::from_rgb(0x1E, 0x37, 0x3C)
     }; // #1e373c
     let radius = if row.is_merge { 2.0 } else { 3.5 };
-    painter.circle(dot_pos, radius, color, st);
+    painter.circle(*dot_pos, radius, color, st);
 }
 
-pub fn draw_head_marker(row: &Row, pos: Pos2, st: Stroke, painter: &Painter) {
+pub fn draw_head_marker(row: &Row, pos: &Pos2, st: Stroke, painter: &Painter) {
     if row.head_markers.is_empty() {
         return;
     }
     let inner_color = Color32::from_rgb(0x1E, 0x37, 0x3C);
 
-    painter.circle(pos, 6.0, inner_color, st);
+    painter.circle(*pos, 6.0, inner_color, st);
 }
 
 pub fn render_edges(edge: &Edge, start: Pos2, end: Pos2, painter: &Painter) {
