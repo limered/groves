@@ -215,7 +215,7 @@ pub fn draw_pills(
     pos: Pos2,
     painter: &Painter,
     pane: &PaneMarkerContext,
-) -> f32 {
+) -> Option<f32> {
     let has_head_marker = !row.head_markers.is_empty()
         && (row.head_markers.iter().any(|hm| hm.is_main)
             || pane.head_marker_to_show().contains(&row.id));
@@ -243,15 +243,14 @@ pub fn draw_pills(
             let head_marker_pos = Pos2::new(centered_pos.x + full_width + 2.0, centered_pos.y);
             full_width += draw_head_pill(row, head_marker_pos, painter, pill_col, budgets.marker);
         }
-        return full_width;
-    }else {
-        if has_head_marker {
-            let head_marker_pos = Pos2::new(centered_pos.x, centered_pos.y);
-            return draw_head_pill(row, head_marker_pos, painter, pill_col, CHAR_BUDGET);
-        }
+        return Some(full_width);
+    } else if has_head_marker {
+        let head_marker_pos = Pos2::new(centered_pos.x, centered_pos.y);
+        let width = draw_head_pill(row, head_marker_pos, painter, pill_col, CHAR_BUDGET);
+        return Some(width);
     }
 
-    0.0
+    None
 }
 
 fn center_position_vertically(pos: Pos2) -> Pos2 {

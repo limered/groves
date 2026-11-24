@@ -139,13 +139,14 @@ impl eframe::App for GrovesApp {
                                         calc_y(top, range_start, row_id),
                                     );
 
-                                    let pill_width = draw_pills(
+                                    let pill_width_option = draw_pills(
                                         row,
                                         pill_pos,
                                         &pill_painter,
                                         &self.pane_marker_context,
                                     );
-                                    if pill_width >= 0.1{
+                                    
+                                    if let Some(pill_width) = pill_width_option {
                                         draw_pill_connector(
                                             Pos2::new(pill_pos.x + pill_width, pill_pos.y),
                                             dot_x - 2.0,
