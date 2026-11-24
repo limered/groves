@@ -1,9 +1,9 @@
-use std::collections::HashSet;
 use crate::colors::{BACKGROUND_COLOR, lane_color};
 use eframe::emath::Rect;
 use eframe::epaint::{CornerRadius, Stroke};
-use egui::{Color32, FontId, Painter, Pos2, Sense, StrokeKind, Ui, Vec2, vec2};
+use egui::{Color32, FontId, Painter, Pos2, StrokeKind, Vec2, vec2};
 use groves_core::{Edge, Pill, PillStyle, Row};
+use std::collections::HashSet;
 use std::string::ToString;
 
 pub const ROW_HEIGHT_PX: f32 = 22.0;
@@ -13,6 +13,51 @@ const FOLDER_ICON: &str = "📁";
 const CHAR_BUDGET: usize = 20;
 const MARKER_SIZE: usize = 9;
 const PLUS_MARKER_SIZE: usize = 3;
+
+const PILL_FONT:FontId = FontId::monospace(14.0);
+
+pub struct PaneMarkerContext {
+    pinned_head_rows: HashSet<String>,
+    hovered_head_row: Option<String>,
+}
+
+impl PaneMarkerContext {
+    pub fn new() -> Self {
+        Self {
+            pinned_head_rows: HashSet::new(),
+            hovered_head_row: None,
+        }
+    }
+    pub fn head_marker_to_show(&self) -> HashSet<String> {
+        let mut res = self.pinned_head_rows.clone();
+        if let Some(hovered) = self.hovered_head_row.as_ref() {
+            res.insert(hovered.clone());
+        };
+        res
+    }
+
+    pub fn toggle_pinned_head(&mut self, marker_id: String) {
+        if !self.pinned_head_rows.contains(&marker_id) {
+            self.pinned_head_rows.insert(marker_id);
+        } else {
+            self.pinned_head_rows.remove(&marker_id);
+        }
+    }
+
+    pub fn hover_marker(&mut self, marker_id: String) {
+        self.hovered_head_row = Some(marker_id);
+    }
+
+    pub fn unhover_marker(&mut self) {
+        self.hovered_head_row = None;
+    }
+}
+
+impl Default for PaneMarkerContext {
+    fn default() -> Self {
+        Self::new()
+    }
+}
 
 pub fn graph_width_px(lane_count: usize) -> f32 {
     lane_count as f32 * LANE_WIDTH_PX
@@ -58,7 +103,6 @@ fn draw_branch_pill(
     pill: &Pill,
     pos: Pos2,
     painter: &Painter,
-    font: FontId,
     pill_col: Color32,
     text: &String,
 ) -> f32 {
@@ -67,7 +111,7 @@ fn draw_branch_pill(
         text_col = pill_col;
     }
 
-    let galley = painter.layout_no_wrap(text.to_string(), font.clone(), text_col);
+    let galley = painter.layout_no_wrap(text.to_string(), PILL_FONT, text_col);
 
     let padding = vec2(8.0, 2.0);
     let mut size = galley.size() + padding;
@@ -94,7 +138,6 @@ fn draw_plus_pill(
     pill: &Pill,
     pos: Pos2,
     painter: &Painter,
-    font: FontId,
     pill_col: Color32,
 ) -> f32 {
     let text = format!("+{}", pill.plus_count);
@@ -102,7 +145,7 @@ fn draw_plus_pill(
     if pill.style == PillStyle::Outline {
         text_col = pill_col;
     }
-    let galley = painter.layout_no_wrap(text.to_string(), font, text_col);
+    let galley = painter.layout_no_wrap(text.to_string(), PILL_FONT, text_col);
 
     let padding = vec2(8.0, 2.0);
     let mut size = galley.size() + padding;
@@ -138,7 +181,6 @@ fn draw_head_pill(
     row: &Row,
     pos: Pos2,
     painter: &Painter,
-    font: FontId,
     pill_col: Color32,
     marker_budget: usize,
 ) -> f32 {
@@ -147,7 +189,7 @@ fn draw_head_pill(
 
         text = shorten_text_to(text, marker_budget.saturating_sub(2));
 
-        let galley = painter.layout_no_wrap(text.to_string(), font, BACKGROUND_COLOR);
+        let galley = painter.layout_no_wrap(text.to_string(), PILL_FONT, BACKGROUND_COLOR);
 
         let mut size = galley.size() + vec2(8.0, 2.0);
         size.x = size.x.max(size.y);
@@ -178,15 +220,12 @@ pub fn draw_pills(
     pill: &Pill,
     pos: Pos2,
     painter: &Painter,
-    font: FontId,
     pill_col: Color32,
-    pinned_heads: &HashSet<String>,
-    hovered_head: &Option<String>
+    pane: &PaneMarkerContext,
 ) -> f32 {
-    let has_head_marker = !row.head_markers.is_empty() && 
-        (row.head_markers.iter().any(|hm| hm.is_main) ||
-        pinned_heads.contains(&row.id) ||
-            (hovered_head.is_some() && hovered_head.as_ref() == Some(&row.id)));
+    let has_head_marker = !row.head_markers.is_empty()
+        && (row.head_markers.iter().any(|hm| hm.is_main)
+            || pane.head_marker_to_show().contains(&row.id));
     let has_plus_marker = pill.plus_count > 0;
     let branch_text = generate_branch_pill_name(pill);
     let (branch_char_budget, marker_budget) = calculate_char_budget(
@@ -201,14 +240,13 @@ pub fn draw_pills(
         pill,
         centered_pos,
         painter,
-        font.clone(),
         pill_col,
         &final_branch_length,
     );
 
     if has_plus_marker {
         let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-        full_width += draw_plus_pill(pill, plus_pos, painter, font.clone(), pill_col)
+        full_width += draw_plus_pill(pill, plus_pos, painter, pill_col)
     }
     if has_head_marker {
         let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
@@ -216,7 +254,6 @@ pub fn draw_pills(
             row,
             head_marker_pos,
             painter,
-            font.clone(),
             pill_col,
             marker_budget,
         );

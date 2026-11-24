@@ -3,13 +3,12 @@ use egui::{Align, Align2, CentralPanel, FontId, Key, Pos2, Rect, Stroke, Ui};
 use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
 use groves_app::head_jump::next_head_jump;
 use groves_app::render::{
-    LANE_WIDTH_PX, ROW_HEIGHT_PX, draw_dots, draw_head_marker, draw_pill_connector, draw_pills,
-    graph_width_px, render_edges, route_edge,
+    LANE_WIDTH_PX, PaneMarkerContext, ROW_HEIGHT_PX, draw_dots, draw_head_marker,
+    draw_pill_connector, draw_pills, graph_width_px, render_edges, route_edge,
 };
 use groves_core::Pane;
 use groves_core::commit_graph::GraphOptions;
 use groves_repo::{Repo, RepoError, open};
-use std::collections::HashSet;
 use std::path::Path;
 use std::time::SystemTime;
 
@@ -18,8 +17,7 @@ const WIDTH_PILL_AREA: f32 = 200.0;
 struct GrovesApp {
     content: Result<Pane, String>,
     head_jump_cursor: Option<usize>,
-    pinned_head_rows: HashSet<String>,
-    hovered_head_row: Option<String>,
+    pane_marker_context: PaneMarkerContext,
 }
 
 impl eframe::App for GrovesApp {
@@ -60,7 +58,6 @@ impl eframe::App for GrovesApp {
                             let left = resp.rect.left();
 
                             let font = FontId::monospace(13.0);
-                            let pill_font = FontId::monospace(14.0);
 
                             // jump to head
                             if is_jump_pending
@@ -104,7 +101,7 @@ impl eframe::App for GrovesApp {
                             }
 
                             // draw texts
-                            let sub_rect = egui::Rect::from_min_size(
+                            let sub_rect = Rect::from_min_size(
                                 resp.rect.min,
                                 Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
                             );
@@ -123,10 +120,8 @@ impl eframe::App for GrovesApp {
                                         pill,
                                         pill_pos,
                                         &pill_painter,
-                                        pill_font.clone(),
                                         lane_color(row.lane),
-                                        &self.pinned_head_rows,
-                                        &self.hovered_head_row,
+                                        &self.pane_marker_context,
                                     );
                                     draw_pill_connector(
                                         Pos2::new(pill_pos.x + pill_width, pill_pos.y),
@@ -153,16 +148,12 @@ impl eframe::App for GrovesApp {
                                         )
                                         .on_hover_cursor(egui::CursorIcon::PointingHand);
                                     if response.clicked() {
-                                        if self.pinned_head_rows.contains(&row.id) {
-                                            self.pinned_head_rows.remove(&row.id);
-                                        } else {
-                                            self.pinned_head_rows.insert(row.id.clone());
-                                        }
+                                        self.pane_marker_context.toggle_pinned_head(row.id.clone())
                                     }
                                     if response.hovered() {
-                                        self.hovered_head_row = Some(row.id.clone());
+                                        self.pane_marker_context.hover_marker(row.id.clone());
                                     } else {
-                                        self.hovered_head_row = None;
+                                        self.pane_marker_context.unhover_marker();
                                     }
                                 }
 
@@ -232,8 +223,7 @@ fn main() {
     let app = GrovesApp {
         content: create_app(repo, &options),
         head_jump_cursor: None,
-        pinned_head_rows: HashSet::new(),
-        hovered_head_row: None,
+        pane_marker_context: PaneMarkerContext::new(),
     };
     let native_options = eframe::NativeOptions::default();
     eframe::run_native("Groves", native_options, Box::new(|_cc| Ok(Box::new(app))))
