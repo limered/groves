@@ -14,7 +14,7 @@ const CHAR_BUDGET: usize = 20;
 const MARKER_SIZE: usize = 9;
 const PLUS_MARKER_SIZE: usize = 3;
 
-const PILL_FONT:FontId = FontId::monospace(14.0);
+const PILL_FONT: FontId = FontId::monospace(14.0);
 
 pub struct PaneMarkerContext {
     pinned_head_rows: HashSet<String>,
@@ -134,12 +134,7 @@ fn draw_branch_pill(
     painter.galley(text_pos, galley, text_col);
     rect.width()
 }
-fn draw_plus_pill(
-    pill: &Pill,
-    pos: Pos2,
-    painter: &Painter,
-    pill_col: Color32,
-) -> f32 {
+fn draw_plus_pill(pill: &Pill, pos: Pos2, painter: &Painter, pill_col: Color32) -> f32 {
     let text = format!("+{}", pill.plus_count);
     let mut text_col = BACKGROUND_COLOR;
     if pill.style == PillStyle::Outline {
@@ -236,13 +231,8 @@ pub fn draw_pills(
 
     let pill_col = lane_color(row.lane);
     let centered_pos = center_position_vertically(pos);
-    let mut full_width = draw_branch_pill(
-        pill,
-        centered_pos,
-        painter,
-        pill_col,
-        &final_branch_length,
-    );
+    let mut full_width =
+        draw_branch_pill(pill, centered_pos, painter, pill_col, &final_branch_length);
 
     if has_plus_marker {
         let plus_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
@@ -250,13 +240,7 @@ pub fn draw_pills(
     }
     if has_head_marker {
         let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
-        full_width += draw_head_pill(
-            row,
-            head_marker_pos,
-            painter,
-            pill_col,
-            marker_budget,
-        );
+        full_width += draw_head_pill(row, head_marker_pos, painter, pill_col, marker_budget);
     }
     full_width
 }

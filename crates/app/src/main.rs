@@ -100,7 +100,7 @@ impl eframe::App for GrovesApp {
                                 }
                             }
 
-                            // draw texts
+                            // draw pills
                             let sub_rect = Rect::from_min_size(
                                 resp.rect.min,
                                 Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
@@ -142,7 +142,7 @@ impl eframe::App for GrovesApp {
                                     let response = ui
                                         .interact(
                                             rect,
-                                            ui.id().with(row.id.clone()),
+                                            ui.id().with(format!("head_marker-{}", row.id.clone())),
                                             Sense::click(),
                                         )
                                         .on_hover_cursor(egui::CursorIcon::PointingHand);
@@ -156,7 +156,7 @@ impl eframe::App for GrovesApp {
                                     }
                                 }
 
-                                painter.text(
+                                let hash_rect = painter.text(
                                     Pos2::new(
                                         calc_x(
                                             left + WIDTH_PILL_AREA,
@@ -170,6 +170,18 @@ impl eframe::App for GrovesApp {
                                     font.clone(),
                                     FONT_COLOR,
                                 );
+
+                                let hash_response = ui
+                                    .interact(
+                                        hash_rect,
+                                        ui.id().with(row.id.clone()),
+                                        Sense::click(),
+                                    )
+                                    .on_hover_cursor(egui::CursorIcon::PointingHand);
+                                if hash_response.clicked() {
+                                    ui.ctx().copy_text(row.id.to_owned());
+                                }
+
                                 painter.text(
                                     Pos2::new(
                                         calc_x(
