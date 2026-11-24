@@ -71,7 +71,10 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
 
     let worktree_proxies = repo.worktrees().map_err(RepoError::WorktreesMissing)?;
     for proxy in worktree_proxies {
-        let mut name = proxy.id().unwrap().to_string();
+        let Ok(proxy_id) = proxy.id() else {
+            continue;
+        };
+        let mut name = proxy_id.to_string();
         let Ok(wkt_repo) = proxy.into_repo_with_possibly_inaccessible_worktree() else {
             continue;
         };
@@ -88,7 +91,10 @@ pub fn open(path: &Path) -> Result<Repo, RepoError> {
         if let Some(wkt_ref_name) = wkt_ref {
             upstream_ref = resolve_upstream_ref(&repo, wkt_ref_name);
         } else {
-            name = target.short_id().unwrap().to_string();
+            let Ok(target_name) = target.short_id() else {
+                continue;
+            };
+            name = target_name.to_string();
         }
 
         let Ok(time) = target.time() else { continue };
