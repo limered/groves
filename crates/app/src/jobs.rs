@@ -1,7 +1,7 @@
 use groves_core::Pane;
 use std::collections::HashSet;
-use std::sync::{mpsc, Arc};
 use std::sync::mpsc::{Receiver, Sender};
+use std::sync::{Arc, mpsc};
 
 struct JobOutcome {
     generation: u64,
@@ -9,7 +9,7 @@ struct JobOutcome {
 }
 pub struct PaneJobs {
     generation: u64,
-    outstanding: HashSet<u64>, 
+    outstanding: HashSet<u64>,
     notify: Option<Arc<dyn Fn() + Send + Sync>>,
     result_tx: Sender<JobOutcome>,
     result_rx: Receiver<JobOutcome>,
@@ -31,8 +31,8 @@ impl PaneJobs {
         None
     } // drains, drops stale generations
     pub fn busy(&self) -> bool {
-        false
-    } // drives the "Loading…" state
+        !self.outstanding.is_empty()
+    }
 }
 
 impl Default for PaneJobs {
