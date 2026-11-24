@@ -220,7 +220,6 @@ pub fn draw_pills(
     pill: &Pill,
     pos: Pos2,
     painter: &Painter,
-    pill_col: Color32,
     pane: &PaneMarkerContext,
 ) -> f32 {
     let has_head_marker = !row.head_markers.is_empty()
@@ -235,6 +234,7 @@ pub fn draw_pills(
     );
     let final_branch_length = shorten_text_to(branch_text, branch_char_budget);
 
+    let pill_col = lane_color(row.lane);
     let centered_pos = center_position_vertically(pos);
     let mut full_width = draw_branch_pill(
         pill,

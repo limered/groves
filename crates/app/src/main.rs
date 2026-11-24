@@ -120,7 +120,6 @@ impl eframe::App for GrovesApp {
                                         pill,
                                         pill_pos,
                                         &pill_painter,
-                                        lane_color(row.lane),
                                         &self.pane_marker_context,
                                     );
                                     draw_pill_connector(
