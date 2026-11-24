@@ -22,6 +22,7 @@ struct GrovesApp {
 
 impl eframe::App for GrovesApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
+        self.pane_marker_context.unhover_marker();
         CentralPanel::default().show(ui, |ui| {
             match &self.content {
                 Ok(pane) => {
@@ -109,6 +110,30 @@ impl eframe::App for GrovesApp {
                             for row_id in range.clone() {
                                 let row = &pane.rows()[row_id];
                                 let dot_x = calc_x(left + WIDTH_PILL_AREA, 8.0, row.lane);
+                                let y = calc_y(top, range_start, row_id);
+                                let dot_center = Pos2::new(dot_x, y);
+                                
+                                // marker hover and click
+                                if !row.head_markers.is_empty() {
+                                    let rect =
+                                        Rect::from_center_size(dot_center, Vec2::new(12.0, 12.0));
+                                    let response = ui
+                                        .interact(
+                                            rect,
+                                            ui.id().with(format!("head_marker-{}", row.id.clone())),
+                                            Sense::click(),
+                                        )
+                                        .on_hover_cursor(egui::CursorIcon::PointingHand);
+                                    if response.clicked() {
+                                        self.pane_marker_context.toggle_pinned_head(row.id.clone())
+                                    }
+                                    if response.hovered() {
+                                        self.pane_marker_context.hover_marker(row.id.clone());
+                                    }
+                                }
+
+                                
+                                // draw pills
                                 if let Some(pill) = &row.pill {
                                     let pill_pos = Pos2::new(
                                         calc_x(left, 8.0, 0),
@@ -132,29 +157,8 @@ impl eframe::App for GrovesApp {
 
                                 // draw dots
                                 let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
-                                let y = calc_y(top, range_start, row_id);
-                                let dot_center = Pos2::new(dot_x, y);
                                 draw_dots(row, &dot_center, st, &painter);
                                 draw_head_marker(row, &dot_center, st, &painter);
-                                if !row.head_markers.is_empty() {
-                                    let rect =
-                                        Rect::from_center_size(dot_center, Vec2::new(12.0, 12.0));
-                                    let response = ui
-                                        .interact(
-                                            rect,
-                                            ui.id().with(format!("head_marker-{}", row.id.clone())),
-                                            Sense::click(),
-                                        )
-                                        .on_hover_cursor(egui::CursorIcon::PointingHand);
-                                    if response.clicked() {
-                                        self.pane_marker_context.toggle_pinned_head(row.id.clone())
-                                    }
-                                    if response.hovered() {
-                                        self.pane_marker_context.hover_marker(row.id.clone());
-                                    } else {
-                                        self.pane_marker_context.unhover_marker();
-                                    }
-                                }
 
                                 let hash_rect = painter.text(
                                     Pos2::new(

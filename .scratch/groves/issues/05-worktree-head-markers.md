@@ -19,10 +19,10 @@
 
 **Rust focus:** `Option` combinators (`map`, `and_then`, `unwrap_or`), gix's worktree API, a small cycling state.
 
-- [ ] `repo` lists all worktrees with their HEADs, including detached ones (fixture with 3 worktrees)
-- [ ] A commit reachable only from a secondary worktree's HEAD is drawn
-- [ ] Opening a linked worktree path yields the same repository as opening the main one
-- [ ] Jump-to-HEAD order: main first, then the others, then wraps around
+- [x] `repo` lists all worktrees with their HEADs, including detached ones (fixture with 3 worktrees) — `repo/tests/worktrees.rs::snapshot_lists_all_worktree_heads_main_first_with_names`
+- [x] A commit reachable only from a secondary worktree's HEAD is drawn — `worktrees.rs::history_reachable_only_from_secondary_worktree_heads_is_drawn`
+- [x] Opening a linked worktree path yields the same repository as opening the main one — `worktrees.rs::opening_a_linked_worktree_folder_yields_the_same_repository`
+- [x] Jump-to-HEAD order: main first, then the others, then wraps around — `core/tests/head_markers.rs::head_jump_rows_*` + `app/tests/head_jump.rs::jump_cycles_main_then_others_then_wraps`
 - [ ] Manual: markers, hover names and click-toggle work
 
 ## Manual checks
