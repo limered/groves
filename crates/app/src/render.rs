@@ -189,7 +189,7 @@ fn draw_head_pill(
         let mut size = galley.size() + vec2(8.0, 2.0);
         size.x = size.x.max(size.y);
 
-        let p = pos + Vec2::new(2.0, 0.0);
+        let p = pos;
         let rect = Rect::from_min_size(p, size);
         let radius = CornerRadius::same(5.0 as u8);
 
@@ -240,7 +240,7 @@ pub fn draw_pills(
             full_width += draw_plus_pill(pill, plus_pos, painter, pill_col)
         }
         if has_head_marker {
-            let head_marker_pos = Pos2::new(centered_pos.x + full_width, centered_pos.y);
+            let head_marker_pos = Pos2::new(centered_pos.x + full_width + 2.0, centered_pos.y);
             full_width += draw_head_pill(row, head_marker_pos, painter, pill_col, budgets.marker);
         }
         return full_width;
