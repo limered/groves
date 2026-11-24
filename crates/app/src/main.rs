@@ -112,7 +112,7 @@ impl eframe::App for GrovesApp {
                                 let dot_x = calc_x(left + WIDTH_PILL_AREA, 8.0, row.lane);
                                 let y = calc_y(top, range_start, row_id);
                                 let dot_center = Pos2::new(dot_x, y);
-                                
+
                                 // marker hover and click
                                 if !row.head_markers.is_empty() {
                                     let rect =
@@ -132,9 +132,8 @@ impl eframe::App for GrovesApp {
                                     }
                                 }
 
-                                
                                 // draw pills
-                                if let Some(pill) = &row.pill {
+                                if !row.head_markers.is_empty() || row.pill.is_some() {
                                     let pill_pos = Pos2::new(
                                         calc_x(left, 8.0, 0),
                                         calc_y(top, range_start, row_id),
@@ -142,17 +141,18 @@ impl eframe::App for GrovesApp {
 
                                     let pill_width = draw_pills(
                                         row,
-                                        pill,
                                         pill_pos,
                                         &pill_painter,
                                         &self.pane_marker_context,
                                     );
-                                    draw_pill_connector(
-                                        Pos2::new(pill_pos.x + pill_width, pill_pos.y),
-                                        dot_x - 2.0,
-                                        &painter,
-                                        lane_color(row.lane),
-                                    );
+                                    if pill_width >= 0.1{
+                                        draw_pill_connector(
+                                            Pos2::new(pill_pos.x + pill_width, pill_pos.y),
+                                            dot_x - 2.0,
+                                            &painter,
+                                            lane_color(row.lane),
+                                        );
+                                    }
                                 }
 
                                 // draw dots

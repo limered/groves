@@ -109,7 +109,7 @@ impl Pane {
         for r in all_refs {
             let t = r.target.clone();
             commit_to_ref
-                .entry(t.clone().to_owned())
+                .entry(t)
                 .or_default()
                 .push(r.clone());
         }
