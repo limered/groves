@@ -29,3 +29,16 @@ groves: a read-only commit-graph viewer in Rust (egui/eframe 0.36, gix). Learnin
 - The CD release text is the `## [X.Y.Z]` section of `CHANGELOG.md`, so keep that heading format exact.
 - `.github/workflows/cd.yml` runs on `v*` tags. The tag must equal the `version` in `crates/app/Cargo.toml`, or the job fails. CI uses `--locked`, so commit `Cargo.lock`.
 - The Linux build uses `cargo zigbuild` targeting glibc 2.31. Windows produces a zip containing `groves.exe`.
+
+## Architecture rules
+
+- Organize by feature, then responsibility. Prefer `commit_graph/{selection,layout,presentation}.rs` over project-wide `services/` and `models/`. Split when responsibilities differ, not at an arbitrary file size.
+- Separate I/O from computation. Load data, read clocks, and wire dependencies at application boundaries; pass explicit inputs into core logic. Example: `build(commits, refs, options)` instead of `Pane::load(source)` reading the clock internally.
+- Keep policy, algorithms, and rendering distinct. Example: selection decides which commits appear; layout assigns rows and lanes; presentation creates labels; the renderer owns pixel dimensions.
+- Make dependencies explicit and directional. Core rules must not depend on UI or storage implementations. Pass required dependencies rather than global state or an oversized application context.
+- Prefer simple functions and concrete types. Add traits only for meaningful interchangeable dependencies; add crates only when an enforceable boundary justifies them. Do not create an abstraction for every struct or pipeline stage.
+- Minimize exposed APIs. Keep implementation modules and fields private; use `pub(super)` or `pub(crate)` where sufficient, and re-export only intended entry points.
+- Make contracts explicit. Return named intermediate results instead of ambiguous tuples; distinguish IDs, indices, and coordinates when confusion is plausible. Example: edge row indices must address the final emitted rows.
+- Define failure behavior consistently. Never silently replace a missing required value with an unrelated default. Explicitly choose whether incomplete input is valid, skipped, or an error.
+- Test responsibilities and invariants independently. Example: test visibility thresholds separately from lane placement; assert every edge references an existing row. Define deterministic tie-breakers where output order matters.
+- Refactor incrementally. Capture existing behavior, extract one responsibility at a time, and separate structural changes from bug fixes or policy changes. Avoid speculative infrastructure.

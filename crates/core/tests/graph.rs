@@ -27,18 +27,23 @@
 //!     pub fn rows(&self) -> &[Row];       // as before, now in graph order
 //!     pub fn edges(&self) -> &[Edge];
 //!     pub fn lane_count(&self) -> usize;  // natural graph width in lanes
-//!     pub fn graph_width_px(&self) -> f32; // lane_count * LANE_WIDTH_PX
 //! }
-//! pub const ROW_HEIGHT_PX: f32 = 22.0;
-//! pub const LANE_WIDTH_PX: f32 = 14.0;
 //! ```
+//!
+//! Pixel sizes (22 px rows, 14 px lanes) and the graph-column width they
+//! derive live in the renderer, `crates/app/src/render.rs` — core owns the
+//! graph's lane count, the renderer owns pixels ("the renderer owns pixel
+//! dimensions"). The width test moved there when the constants did.
 //!
 //! What the tests assert is what a user would notice: which commit sits on
 //! which row, which lane each row's node sits in, how wide the graph column
 //! is — never internal DAG storage.
+//!
+//! The caller owns the clock and the staleness window, so every load passes
+//! `pane_options(TEST_NOW)`: the fixtures are anchored to that same instant.
 
-use groves_core::{LANE_WIDTH_PX, Pane, ROW_HEIGHT_PX};
-use groves_testkit::{GraphCommit, SyntheticSource};
+use groves_core::Pane;
+use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW, pane_options};
 use std::collections::HashMap;
 
 fn lanes_by_id(pane: &Pane) -> HashMap<String, usize> {
@@ -57,7 +62,10 @@ fn row_of(pane: &Pane, id: &str) -> usize {
 
 #[test]
 fn children_appear_above_parents_in_a_deterministic_order() {
-    let pane = Pane::load(&SyntheticSource::branch_and_merge());
+    let pane = Pane::load(
+        &SyntheticSource::branch_and_merge(),
+        &pane_options(TEST_NOW),
+    );
 
     // Every parent sits on a lower row than its children.
     assert!(row_of(&pane, "m3") < row_of(&pane, "m1"));
@@ -66,7 +74,10 @@ fn children_appear_above_parents_in_a_deterministic_order() {
     assert!(row_of(&pane, "s1") < row_of(&pane, "m0"));
 
     // Same input, same rows: no HashMap iteration order may leak through.
-    let again = Pane::load(&SyntheticSource::branch_and_merge());
+    let again = Pane::load(
+        &SyntheticSource::branch_and_merge(),
+        &pane_options(TEST_NOW),
+    );
     let order: Vec<&str> = pane.rows().iter().map(|r| r.id.as_str()).collect();
     let order_again: Vec<&str> = again.rows().iter().map(|r| r.id.as_str()).collect();
     assert_eq!(order, order_again, "layout must be deterministic");
@@ -75,8 +86,14 @@ fn children_appear_above_parents_in_a_deterministic_order() {
 
 #[test]
 fn shuffled_input_still_draws_children_above_parents() {
-    let ordered = Pane::load(&SyntheticSource::branch_and_merge());
-    let shuffled = Pane::load(&SyntheticSource::shuffled_branch_and_merge());
+    let ordered = Pane::load(
+        &SyntheticSource::branch_and_merge(),
+        &pane_options(TEST_NOW),
+    );
+    let shuffled = Pane::load(
+        &SyntheticSource::shuffled_branch_and_merge(),
+        &pane_options(TEST_NOW),
+    );
 
     let order: Vec<&str> = ordered.rows().iter().map(|r| r.id.as_str()).collect();
     let shuffled_order: Vec<&str> = shuffled.rows().iter().map(|r| r.id.as_str()).collect();
@@ -123,7 +140,7 @@ fn second_parent_branch_does_not_jump_above_head() {
         },
     ]);
 
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     let order: Vec<&str> = pane.rows().iter().map(|row| row.id.as_str()).collect();
 
     assert_eq!(order, vec!["h", "s1", "m1", "m0"]);
@@ -131,7 +148,7 @@ fn second_parent_branch_does_not_jump_above_head() {
 
 #[test]
 fn linear_history_uses_a_single_lane() {
-    let pane = Pane::load(&SyntheticSource::linear_three());
+    let pane = Pane::load(&SyntheticSource::linear_three(), &pane_options(TEST_NOW));
 
     assert_eq!(pane.lane_count(), 1, "a line needs exactly one lane");
     for row in pane.rows() {
@@ -141,7 +158,10 @@ fn linear_history_uses_a_single_lane() {
 
 #[test]
 fn branch_and_merge_reuses_the_freed_lane() {
-    let pane = Pane::load(&SyntheticSource::branch_and_merge());
+    let pane = Pane::load(
+        &SyntheticSource::branch_and_merge(),
+        &pane_options(TEST_NOW),
+    );
     let lanes = lanes_by_id(&pane);
 
     assert_eq!(
@@ -161,7 +181,10 @@ fn branch_and_merge_reuses_the_freed_lane() {
 fn head_first_parent_chain_owns_lane_zero() {
     // The side tip is newer, so recency alone would seed it leftmost.
     // HEAD/main seeding must win: the user follows HEAD down lane 0.
-    let pane = Pane::load(&SyntheticSource::head_newer_side_branch());
+    let pane = Pane::load(
+        &SyntheticSource::head_newer_side_branch(),
+        &pane_options(TEST_NOW),
+    );
     let lanes = lanes_by_id(&pane);
 
     assert_eq!(lanes["m2"], 0, "HEAD tip sits in lane 0");
@@ -175,7 +198,10 @@ fn head_first_parent_chain_owns_lane_zero() {
 
 #[test]
 fn lanes_never_shift_sideways_along_a_branch() {
-    let pane = Pane::load(&SyntheticSource::branch_and_merge());
+    let pane = Pane::load(
+        &SyntheticSource::branch_and_merge(),
+        &pane_options(TEST_NOW),
+    );
     let lanes = lanes_by_id(&pane);
 
     // Each commit's node sits in the lane its branch owns from tip to root:
@@ -202,31 +228,13 @@ fn lanes_never_shift_sideways_along_a_branch() {
 }
 
 #[test]
-fn graph_column_is_lanes_wide_and_never_overlaps_text() {
-    assert_eq!(ROW_HEIGHT_PX, 22.0, "spec: dense but legible 22 px rows");
-    assert_eq!(LANE_WIDTH_PX, 14.0, "spec: 14 px lanes");
-
-    let line = Pane::load(&SyntheticSource::linear_three());
-    assert_eq!(line.graph_width_px(), 1.0 * LANE_WIDTH_PX);
-
-    let merged = Pane::load(&SyntheticSource::branch_and_merge());
-    assert_eq!(merged.graph_width_px(), 2.0 * LANE_WIDTH_PX);
-
-    // The app offsets commit text past this width; the pane reports the
-    // width so text can never sit under the graph.
-    assert!(merged.graph_width_px() > line.graph_width_px());
-}
-
-#[test]
 fn an_empty_pane_has_zero_lanes() {
     // `Pane::empty()` is what load() returns when the snapshot has no HEAD —
     // a pane with no rows must not pretend to be one lane wide.
     assert_eq!(Pane::empty().lane_count(), 0);
-    assert_eq!(Pane::empty().graph_width_px(), 0.0);
 
     let source = SyntheticSource::for_graph_with_refs(vec![], vec![]);
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     assert_eq!(pane.rows().len(), 0);
     assert_eq!(pane.lane_count(), 0);
-    assert_eq!(pane.graph_width_px(), 0.0);
 }

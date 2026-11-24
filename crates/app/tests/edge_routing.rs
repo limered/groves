@@ -75,7 +75,7 @@ fn the_two_merges_pane_routes_every_edge_per_row_gap() {
     // from those spans — the develop line's first-parent route is the one
     // this ticket is about.
     use groves_core::Pane;
-    use groves_testkit::{GraphCommit, SyntheticSource};
+    use groves_testkit::{GraphCommit, SyntheticSource, TEST_NOW, pane_options};
 
     let source = SyntheticSource::for_graph_with_refs(
         vec![
@@ -151,7 +151,7 @@ fn the_two_merges_pane_routes_every_edge_per_row_gap() {
             },
         ],
     );
-    let pane = Pane::load(&source);
+    let pane = Pane::load(&source, &pane_options(TEST_NOW));
     assert_eq!(pane.rows().len(), 6, "the whole shape is on the pane");
 
     let lane_of = |id: &str, _row: usize| -> usize {
