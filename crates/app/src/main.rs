@@ -1,15 +1,19 @@
-use egui::{Align, Align2, CentralPanel, Context, FontId, Key, Pos2, Rect, Sense, Stroke, Ui, Vec2};
+use egui::{
+    Align, Align2, CentralPanel, Context, FontId, Key, Pos2, Rect, Sense, Stroke, Ui, Vec2,
+};
+use groves_app::colors::{BACKGROUND_COLOR, FONT_COLOR, lane_color};
+use groves_app::head_jump::next_head_jump;
 use groves_app::jobs::PaneJobs;
-use groves_app::render::{draw_pills, PaneMarkerContext, LANE_WIDTH_PX, ROW_HEIGHT_PX, draw_pill_connector, draw_dots, draw_head_marker, graph_width_px, route_edge, render_edges};
+use groves_app::render::{
+    LANE_WIDTH_PX, PaneMarkerContext, ROW_HEIGHT_PX, draw_dots, draw_head_marker,
+    draw_pill_connector, draw_pills, graph_width_px, render_edges, route_edge,
+};
 use groves_core::Pane;
 use groves_core::commit_graph::GraphOptions;
 use groves_repo::{Repo, RepoError, open};
 use std::path::Path;
-use std::sync::{Arc, mpsc};
-use std::thread;
+use std::sync::Arc;
 use std::time::SystemTime;
-use groves_app::colors::{lane_color, BACKGROUND_COLOR, FONT_COLOR};
-use groves_app::head_jump::next_head_jump;
 
 const WIDTH_PILL_AREA: f32 = 200.0;
 
@@ -19,26 +23,14 @@ struct GrovesApp {
     error: Option<String>,
     head_jump_cursor: Option<usize>,
     pane_marker_context: PaneMarkerContext,
-    rx: mpsc::Receiver<Result<Arc<Pane>, String>>,
 }
 
 impl eframe::App for GrovesApp {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         self.pane_marker_context.unhover_marker();
         CentralPanel::default().show(ui, |ui| {
-            let received = self.rx.try_recv();
-            if let Ok(res) = received {
-                match res {
-                    Ok(pane) => {
-                        self.pane = Some(pane);
-                    }
-                    Err(error) => {
-                        self.error = Some(error);
-                    }
-                }
-            } else if self.pane.is_none()  && self.error.is_some() {
-                ui.label("...loading");
-            }
+            self.update();
+
             if let Some(error) = &self.error {
                 ui.label(error);
             };
@@ -56,159 +48,167 @@ impl eframe::App for GrovesApp {
                 let row_height = ROW_HEIGHT_PX;
                 let row_height_without_spacing = row_height - ui.spacing().item_spacing.y;
                 let sa = egui::ScrollArea::vertical().auto_shrink(false);
-                sa.show_rows(ui, row_height_without_spacing, pane.rows().len(), |ui, row_range|{
-                    let full = ui.available_rect_before_wrap();
+                sa.show_rows(
+                    ui,
+                    row_height_without_spacing,
+                    pane.rows().len(),
+                    |ui, row_range| {
+                        let full = ui.available_rect_before_wrap();
 
-                    let range = row_range.clone();
-                    let (resp, painter) = ui.allocate_painter(
-                        Vec2::new(full.width(), row_range.len() as f32 * row_height),
-                        Sense::click(),
-                    );
-                    painter.rect_filled(resp.rect, 0.0, BACKGROUND_COLOR);
-
-                    let top = resp.rect.top();
-                    let left = resp.rect.left();
-
-                    let font = FontId::monospace(13.0);
-
-                    // jump to head
-                    if is_jump_pending && let Some(jump_target_index) = self.head_jump_cursor {
-                        let target_row = head_jump_targets[jump_target_index];
-                        let y_center = calc_y(resp.rect.top(), row_range.start, target_row);
-                        let jump_rect = Rect::from_center_size(
-                            Pos2::new(resp.rect.center().x, y_center),
-                            Vec2::new(resp.rect.width(), ROW_HEIGHT_PX),
+                        let range = row_range.clone();
+                        let (resp, painter) = ui.allocate_painter(
+                            Vec2::new(full.width(), row_range.len() as f32 * row_height),
+                            Sense::click(),
                         );
-                        ui.scroll_to_rect(jump_rect, Some(Align::Center))
-                    }
+                        painter.rect_filled(resp.rect, 0.0, BACKGROUND_COLOR);
 
-                    // edges
-                    let range_start = row_range.start;
-                    for edge in pane.edges().iter() {
-                        if edge.parent_row <= range.start.saturating_sub(1)
-                            || edge.child_row >= row_range.end
-                        {
-                            continue;
-                        }
+                        let top = resp.rect.top();
+                        let left = resp.rect.left();
 
-                        let points = route_edge(edge);
-                        for point_index in 1..points.len() {
-                            let (last_row, last_lane) = points[point_index - 1];
-                            let (row, lane) = points[point_index];
+                        let font = FontId::monospace(13.0);
 
-                            let start_y = calc_y(top, range_start, last_row);
-                            let end_y = calc_y(top, range_start, row);
-                            let start_x = calc_x(left + WIDTH_PILL_AREA, 8.0, last_lane);
-                            let end_x = calc_x(left + WIDTH_PILL_AREA, 8.0, lane);
-
-                            render_edges(
-                                edge,
-                                Pos2::new(start_x, start_y),
-                                Pos2::new(end_x, end_y),
-                                &painter,
+                        // jump to head
+                        if is_jump_pending && let Some(jump_target_index) = self.head_jump_cursor {
+                            let target_row = head_jump_targets[jump_target_index];
+                            let y_center = calc_y(resp.rect.top(), row_range.start, target_row);
+                            let jump_rect = Rect::from_center_size(
+                                Pos2::new(resp.rect.center().x, y_center),
+                                Vec2::new(resp.rect.width(), ROW_HEIGHT_PX),
                             );
+                            ui.scroll_to_rect(jump_rect, Some(Align::Center))
                         }
-                    }
 
-                    // draw pills
-                    let sub_rect = Rect::from_min_size(
-                        resp.rect.min,
-                        Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
-                    );
-                    let pill_painter = painter.with_clip_rect(sub_rect);
-                    for row_id in range.clone() {
-                        let row = &pane.rows()[row_id];
-                        let dot_x = calc_x(left + WIDTH_PILL_AREA, 8.0, row.lane);
-                        let y = calc_y(top, range_start, row_id);
-                        let dot_center = Pos2::new(dot_x, y);
-
-                        // marker hover and click
-                        if !row.head_markers.is_empty() {
-                            let rect =
-                                Rect::from_center_size(dot_center, Vec2::new(12.0, 12.0));
-                            let response = ui
-                                .interact(
-                                    rect,
-                                    ui.id().with(format!("head_marker-{}", row.id.clone())),
-                                    Sense::click(),
-                                )
-                                .on_hover_cursor(egui::CursorIcon::PointingHand);
-                            if response.clicked() {
-                                self.pane_marker_context.toggle_pinned_head(row.id.clone())
+                        // edges
+                        let range_start = row_range.start;
+                        for edge in pane.edges().iter() {
+                            if edge.parent_row <= range.start.saturating_sub(1)
+                                || edge.child_row >= row_range.end
+                            {
+                                continue;
                             }
-                            if response.hovered() {
-                                self.pane_marker_context.hover_marker(row.id.clone());
-                            }
-                        }
 
-                        // draw pills
-                        if !row.head_markers.is_empty() || row.pill.is_some() {
-                            let pill_pos = Pos2::new(
-                                calc_x(left, 8.0, 0),
-                                calc_y(top, range_start, row_id),
-                            );
+                            let points = route_edge(edge);
+                            for point_index in 1..points.len() {
+                                let (last_row, last_lane) = points[point_index - 1];
+                                let (row, lane) = points[point_index];
 
-                            let pill_width_option = draw_pills(
-                                row,
-                                pill_pos,
-                                &pill_painter,
-                                &self.pane_marker_context,
-                            );
+                                let start_y = calc_y(top, range_start, last_row);
+                                let end_y = calc_y(top, range_start, row);
+                                let start_x = calc_x(left + WIDTH_PILL_AREA, 8.0, last_lane);
+                                let end_x = calc_x(left + WIDTH_PILL_AREA, 8.0, lane);
 
-                            if let Some(pill_width) = pill_width_option {
-                                draw_pill_connector(
-                                    Pos2::new(pill_pos.x + pill_width, pill_pos.y),
-                                    dot_x - 2.0,
+                                render_edges(
+                                    edge,
+                                    Pos2::new(start_x, start_y),
+                                    Pos2::new(end_x, end_y),
                                     &painter,
-                                    lane_color(row.lane),
                                 );
                             }
                         }
 
-                        // draw dots
-                        let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
-                        draw_dots(row, &dot_center, st, &painter);
-                        draw_head_marker(row, &dot_center, st, &painter);
-
-                        let hash_rect = painter.text(
-                            Pos2::new(
-                                calc_x(
-                                    left + WIDTH_PILL_AREA,
-                                    16.0 + graph_width_px(pane.lane_count()),
-                                    0,
-                                ),
-                                calc_y(top, range.start, row_id),
-                            ),
-                            Align2::LEFT_CENTER,
-                            &row.short,
-                            font.clone(),
-                            FONT_COLOR,
+                        // draw pills
+                        let sub_rect = Rect::from_min_size(
+                            resp.rect.min,
+                            Vec2::new(WIDTH_PILL_AREA, resp.rect.height()),
                         );
+                        let pill_painter = painter.with_clip_rect(sub_rect);
+                        for row_id in range.clone() {
+                            let row = &pane.rows()[row_id];
+                            let dot_x = calc_x(left + WIDTH_PILL_AREA, 8.0, row.lane);
+                            let y = calc_y(top, range_start, row_id);
+                            let dot_center = Pos2::new(dot_x, y);
 
-                        let hash_response = ui
-                            .interact(hash_rect, ui.id().with(row.id.clone()), Sense::click())
-                            .on_hover_cursor(egui::CursorIcon::PointingHand);
-                        if hash_response.clicked() {
-                            ui.ctx().copy_text(row.id.to_owned());
+                            // marker hover and click
+                            if !row.head_markers.is_empty() {
+                                let rect =
+                                    Rect::from_center_size(dot_center, Vec2::new(12.0, 12.0));
+                                let response = ui
+                                    .interact(
+                                        rect,
+                                        ui.id().with(format!("head_marker-{}", row.id.clone())),
+                                        Sense::click(),
+                                    )
+                                    .on_hover_cursor(egui::CursorIcon::PointingHand);
+                                if response.clicked() {
+                                    self.pane_marker_context.toggle_pinned_head(row.id.clone())
+                                }
+                                if response.hovered() {
+                                    self.pane_marker_context.hover_marker(row.id.clone());
+                                }
+                            }
+
+                            // draw pills
+                            if !row.head_markers.is_empty() || row.pill.is_some() {
+                                let pill_pos = Pos2::new(
+                                    calc_x(left, 8.0, 0),
+                                    calc_y(top, range_start, row_id),
+                                );
+
+                                let pill_width_option = draw_pills(
+                                    row,
+                                    pill_pos,
+                                    &pill_painter,
+                                    &self.pane_marker_context,
+                                );
+
+                                if let Some(pill_width) = pill_width_option {
+                                    draw_pill_connector(
+                                        Pos2::new(pill_pos.x + pill_width, pill_pos.y),
+                                        dot_x - 2.0,
+                                        &painter,
+                                        lane_color(row.lane),
+                                    );
+                                }
+                            }
+
+                            // draw dots
+                            let st = Stroke::new(2.0, lane_color(row.lane)); // #5c7855
+                            draw_dots(row, &dot_center, st, &painter);
+                            draw_head_marker(row, &dot_center, st, &painter);
+
+                            let hash_rect = painter.text(
+                                Pos2::new(
+                                    calc_x(
+                                        left + WIDTH_PILL_AREA,
+                                        16.0 + graph_width_px(pane.lane_count()),
+                                        0,
+                                    ),
+                                    calc_y(top, range.start, row_id),
+                                ),
+                                Align2::LEFT_CENTER,
+                                &row.short,
+                                font.clone(),
+                                FONT_COLOR,
+                            );
+
+                            let hash_response = ui
+                                .interact(hash_rect, ui.id().with(row.id.clone()), Sense::click())
+                                .on_hover_cursor(egui::CursorIcon::PointingHand);
+                            if hash_response.clicked() {
+                                ui.ctx().copy_text(row.id.to_owned());
+                            }
+
+                            painter.text(
+                                Pos2::new(
+                                    calc_x(
+                                        left + WIDTH_PILL_AREA,
+                                        16.0 + graph_width_px(pane.lane_count())
+                                            + 5.0 * LANE_WIDTH_PX,
+                                        0,
+                                    ),
+                                    calc_y(top, range.start, row_id),
+                                ),
+                                Align2::LEFT_CENTER,
+                                row.title.clone(),
+                                font.clone(),
+                                FONT_COLOR,
+                            );
                         }
-
-                        painter.text(
-                            Pos2::new(
-                                calc_x(
-                                    left + WIDTH_PILL_AREA,
-                                    16.0 + graph_width_px(pane.lane_count())
-                                        + 5.0 * LANE_WIDTH_PX,
-                                    0,
-                                ),
-                                calc_y(top, range.start, row_id),
-                            ),
-                            Align2::LEFT_CENTER,
-                            row.title.clone(),
-                            font.clone(),
-                            FONT_COLOR,
-                        );
-                    }
-                });
+                    },
+                );
+            }
+            if self.pane_jobs.busy() {
+                ui.label("Loading repository...");
             }
         });
     }
@@ -216,27 +216,34 @@ impl eframe::App for GrovesApp {
 
 impl GrovesApp {
     pub fn new(path: &Path, options: GraphOptions, context: Context) -> Self {
-        let (tx, rx) = mpsc::channel();
-
         let p = path.to_owned();
-        thread::spawn(move || {
-            let repo = open(&p);
-            let content = create_app(repo, &options);
+        let mut pane_jobs = PaneJobs::new();
+        let ctx = context.clone();
+        pane_jobs.set_notify(move || ctx.request_repaint());
+        pane_jobs.request(move || load_task(&p, options));
 
-            let result = content.map(Arc::new).map_err(|e| e.to_string());
-            tx.send(result).unwrap();
-        });
         Self {
-            pane: Some(Arc::new(Pane::empty())),
+            pane: None,
             error: None,
-            pane_jobs: PaneJobs::new(),
-            pane_marker_context: PaneMarkerContext::new(),
             head_jump_cursor: None,
-            rx,
+            pane_marker_context: PaneMarkerContext::new(),
+            pane_jobs,
         }
     }
-    pub fn update() -> Option<Result<Pane, String>> {
-        None
+
+    fn update(&mut self) {
+        if let Some(received) = self.pane_jobs.poll() {
+            match received {
+                Ok(pane) => {
+                    self.error = None;
+                    self.pane = Some(pane);
+                }
+                Err(error) => {
+                    self.pane = None;
+                    self.error = Some(error);
+                }
+            }
+        }
     }
 }
 
@@ -273,7 +280,15 @@ fn main() {
     .expect("failed to start");
 }
 
-fn create_app(repo: Result<Repo, RepoError>, options: &GraphOptions) -> Result<Pane, String> {
+fn load_task(path: &Path, options: GraphOptions) -> Result<Pane, String> {
+    let repo = open(path);
+    load_pane_for_repo(repo, &options)
+}
+
+fn load_pane_for_repo(
+    repo: Result<Repo, RepoError>,
+    options: &GraphOptions,
+) -> Result<Pane, String> {
     repo.map(|repo| Pane::load(&repo, options))
         .map_err(|err| err.to_string())
 }
