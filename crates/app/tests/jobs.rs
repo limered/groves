@@ -31,7 +31,7 @@
 
 use groves_app::jobs::PaneJobs;
 use groves_core::Pane;
-use groves_testkit::{TEST_NOW, SyntheticSource, pane_options};
+use groves_testkit::{SyntheticSource, TEST_NOW, pane_options};
 use std::sync::Arc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::time::Duration;
@@ -61,8 +61,8 @@ fn a_requested_job_returns_its_result_over_the_channel() {
     let mut jobs = PaneJobs::new();
     jobs.request(|| load_after(1, &SyntheticSource::three()));
 
-    let outcome = poll_until_result(&mut jobs)
-        .expect("the job's result must arrive over the channel");
+    let outcome =
+        poll_until_result(&mut jobs).expect("the job's result must arrive over the channel");
 
     let pane = outcome.expect("a successful task yields a pane");
     let titles: Vec<&str> = pane.rows().iter().map(|r| r.title.as_str()).collect();
@@ -82,8 +82,7 @@ fn a_stale_result_is_discarded_instead_of_overwriting_the_newest() {
     jobs.request(|| load_after(120, &SyntheticSource::three()));
     jobs.request(|| load_after(5, &SyntheticSource::linear_three()));
 
-    let outcome = poll_until_result(&mut jobs)
-        .expect("the newest job's result must arrive");
+    let outcome = poll_until_result(&mut jobs).expect("the newest job's result must arrive");
     let pane = outcome.expect("the newest job succeeds");
     assert_eq!(
         pane.rows().len(),
@@ -91,7 +90,8 @@ fn a_stale_result_is_discarded_instead_of_overwriting_the_newest() {
         "the surfaced pane is the *newest* job's (linear_three)"
     );
     assert_eq!(
-        pane.rows()[0].title, "Tip",
+        pane.rows()[0].title,
+        "Tip",
         "the surfaced pane is the *newest* job's (linear_three)"
     );
 
