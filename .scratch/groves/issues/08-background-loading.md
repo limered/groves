@@ -17,8 +17,8 @@
 
 ## Manual checks
 
-- [ ] `cargo run -p groves-app -- <path to a big repo>`: the window appears immediately with a loading placeholder (today it doesn't appear at all until the pane is loaded), and the graph arrives on its own — without touching the mouse (the worker's repaint request at work).
-- [ ] While loading, the window stays responsive: drag it, resize it, scroll — the UI thread never blocks.
+- [x] `cargo run -p groves-app -- <path to a big repo>`: the window appears immediately with a loading placeholder (today it doesn't appear at all until the pane is loaded), and the graph arrives on its own — without touching the mouse (the worker's repaint request at work).
+- [x] While loading, the window stays responsive: drag it, resize it, scroll — the UI thread never blocks.
 - [ ] The repo handle story: the load task opens the repo itself and drops it at task end; nothing gix-related is reachable from the UI thread (review gate, not a manual step).
 
 **Known simplification (accepted for this ticket):** a panicking worker never sends a result, so `busy` would stay true. Revisited when the fetch scheduler (17) starts sharing the runner.
