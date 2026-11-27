@@ -119,7 +119,7 @@ fn busy_is_true_while_a_job_runs_and_false_once_its_result_is_polled() {
         "the UI must show its loading state while the job runs"
     );
 
-    poll_until_result(&mut jobs).expect("the job finishes");
+    let _ = poll_until_result(&mut jobs).expect("the job finishes");
     assert!(
         !jobs.busy(),
         "once the result is consumed the loading state clears"
@@ -136,7 +136,7 @@ fn a_finished_job_pokes_the_notify_hook_once() {
     });
 
     jobs.request(|| load_after(1, &SyntheticSource::three()));
-    poll_until_result(&mut jobs).expect("the job finishes");
+    let _ = poll_until_result(&mut jobs).expect("the job finishes");
 
     assert_eq!(
         repaints.load(Ordering::SeqCst),
