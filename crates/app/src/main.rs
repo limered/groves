@@ -33,8 +33,7 @@ impl eframe::App for GrovesApp {
 
             if let Some(error) = &self.error {
                 ui.label(error);
-            };
-            if let Some(pane) = &self.pane {
+            } else if let Some(pane) = &self.pane {
                 // prepare jump to head
                 let head_jump_targets = pane.head_jump_rows();
                 let mut is_jump_pending = false;
@@ -206,8 +205,7 @@ impl eframe::App for GrovesApp {
                         }
                     },
                 );
-            }
-            if self.pane_jobs.busy() {
+            } else {
                 ui.label("Loading repository...");
             }
         });
