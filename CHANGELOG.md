@@ -2,6 +2,11 @@
 
 User-facing changes per release. Each section is written by the `release` skill and also serves as the text of the GitHub Release.
 
+## [0.6.0] - 2026-11-28
+
+### Added
+- Opening a repository no longer freezes the window: the graph loads in the background while a loading placeholder shows, so big repositories open into a responsive window that stays usable during the load. (08)
+
 ## [0.5.0] - 2026-11-24
 
 ### Added
